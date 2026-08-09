@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Почему решает число попыток</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --bg2:#131923;
+    --ink:#e8eef6;
+    --muted:#93a1b1;
+    --dim:#5d6b7c;
+    --blue:#5ba8f5;
+    --gold:#f0a83c;
+    --green:#5fd38d;
+    --red:#f2686c;
+    --violet:#b98cf0;
+    --line:#243040;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* ——— прогресс и навигация ——— */
+  #bar{position:fixed;top:0;left:0;height:2px;width:0;background:linear-gradient(90deg,var(--blue),var(--gold));z-index:50;transition:width .12s linear}
+  #dots{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:50;display:flex;flex-direction:column;gap:9px}
+  #dots button{
+    width:8px;height:8px;padding:0;border:0;border-radius:50%;
+    background:#2b3746;cursor:pointer;transition:background .25s, transform .25s;
+  }
+  #dots button:hover{background:#4a5a6c}
+  #dots button.on{background:var(--ink);transform:scale(1.45)}
+  @media (max-width:760px){#dots{display:none}}
+
+  /* ——— сцены ——— */
+  section{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:8vh 20px;position:relative;
+  }
+  .wrap{width:100%;max-width:940px}
+  .wrap > *{opacity:0;transform:translateY(14px);transition:opacity .7s ease,transform .7s ease}
+  section.in .wrap > *{opacity:1;transform:none}
+  section.in .wrap > *:nth-child(2){transition-delay:.08s}
+  section.in .wrap > *:nth-child(3){transition-delay:.16s}
+  section.in .wrap > *:nth-child(4){transition-delay:.24s}
+  section.in .wrap > *:nth-child(5){transition-delay:.32s}
+
+  .kicker{
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--dim);margin:0 0 14px;
+  }
+  h1{font-size:clamp(38px,7vw,68px);line-height:1.03;margin:0 0 22px;font-weight:400;letter-spacing:-.02em}
+  h2{font-size:clamp(26px,4.2vw,40px);line-height:1.12;margin:0 0 20px;font-weight:400;letter-spacing:-.01em}
+  p{font-size:clamp(17px,2vw,20.5px);line-height:1.62;color:#cfdae6;margin:0 0 16px;max-width:47em}
+  p.after{color:var(--muted);font-size:clamp(16px,1.8vw,18.5px)}
+  .lead{font-size:clamp(19px,2.3vw,23px);color:#dae4ef}
+  em{color:var(--ink);font-style:italic}
+  b{font-weight:600;color:#fff}
+  .fine{font-size:15px;color:var(--dim);line-height:1.5}
+  .stage{width:100%;height:clamp(250px,44vh,420px);margin:22px 0 20px;position:relative}
+  canvas{width:100%;height:100%;display:block;border-radius:10px;background:var(--bg2)}
+  .again{
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:13.5px;color:var(--muted);background:transparent;
+    border:1px solid var(--line);border-radius:999px;padding:7px 16px;cursor:pointer;
+    transition:color .2s,border-color .2s;margin:0 0 18px;
+  }
+  .again:hover{color:var(--ink);border-color:#3d4c5e}
+  .actbar{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  .tag{
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+  }
+  .rule{height:1px;background:var(--line);border:0;margin:34px 0 30px;max-width:47em}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:47em;margin:4px 0 18px}
+  @media (max-width:640px){.two{grid-template-columns:1fr}}
+  .col{border:1px solid var(--line);border-radius:10px;padding:15px 18px 16px;background:var(--bg2)}
+  .col h3{margin:0 0 9px;font-size:19px;font-weight:600;letter-spacing:0}
+  .col ul{list-style:none;margin:0;padding:0}
+  .col li{font-size:16.5px;line-height:1.5;color:#cfdae6;padding:4px 0 4px 15px;position:relative}
+  .col li:before{content:"·";position:absolute;left:2px;color:var(--dim)}
+  .col .note{font-size:14.5px;color:var(--muted);margin:11px 0 0;line-height:1.45;max-width:none}
+  ul.take{list-style:none;padding:0;margin:0;max-width:47em}
+  ul.take li{
+    font-size:clamp(17px,2vw,20px);line-height:1.55;color:#cfdae6;
+    padding:14px 0 14px 22px;border-top:1px solid var(--line);position:relative;
+  }
+  ul.take li:before{content:"—";position:absolute;left:0;color:var(--dim)}
+  .scrollhint{
+    position:absolute;bottom:26px;left:50%;transform:translateX(-50%);
+    font-family:ui-sans-serif,-apple-system,sans-serif;font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--dim);animation:bob 2.4s ease-in-out infinite;
+  }
+  @keyframes bob{0%,100%{transform:translate(-50%,0);opacity:.55}50%{transform:translate(-50%,7px);opacity:1}}
+</style>
+</head>
+<body>
+
+<div id="bar"></div>
+<nav id="dots"></nav>
+
+<!-- 1 ——————————————————————————————— -->
+<section id="s4h" data-title="Крючок">
+  <div class="wrap">
+    <p class="kicker">Один человек, шестьдесят попыток</p>
+    <h1>Почему решает число попыток</h1>
+    <p class="lead">Один человек, один канал, шестьдесят роликов подряд. За это время он не стал другим человеком: те же руки, та же голова, то же старание. Ролики выходят по очереди, а мы смотрим, сколько человек посмотрело каждый.</p>
+    <p>Следи не за столбиками, а за шкалой слева: она отъезжает сама, как только выходит ролик лучше всех прежних.</p>
+    <div class="stage"><canvas id="cv-s4h"></canvas></div>
+    <div class="actbar"><button class="again" data-again="s4h">ещё раз</button><span class="tag">запусти несколько раз — разброс тот же</span></div>
+    <p class="after">Больше половины роликов — меньше четырёхсот человек. А лучший — тысячи, иногда десятки тысяч: внизу написано, во сколько раз он больше обычного. И заметь, что сделала шкала: пока такого ролика не было, все прежние выглядели по-разному, повыше и пониже. Стоило ему выйти — и весь прежний год сплющился в полоску у самого низа. Это не два разных человека и не два разных умения. Это <em>один</em> человек и его попытки.</p>
+  </div>
+</section>
+
+<!-- 2 ——————————————————————————————— -->
+<section id="s11c" data-title="Почему так">
+  <div class="wrap">
+    <p class="kicker">Акт I · Откуда такой разброс</p>
+    <h2>Почему попытки разлетаются, а рост — нет</h2>
+    <p>Сравни с чем-нибудь знакомым. Пробеги стометровку шестьдесят раз — и все шестьдесят результатов уместятся в пару секунд друг от друга. Худший от лучшего отличается процентов на десять, и никакой шестидесятый забег не окажется в тысячу раз быстрее первого. А ролики у одного и того же человека отличаются в тысячу раз запросто. Почему?</p>
+    <p>Дело в том, как результат набирается. Время на стометровке <b>складывается</b> из множества мелких причин: как спал, как оттолкнулся, какой ветер. Каждая добавляет свою десятую долю секунды, и они друг друга гасят: чтобы получился рекорд, надо, чтобы почти все сложились удачно разом, а так почти никогда не бывает. Поэтому все попытки и толпятся около твоего обычного результата, а самая удачная лишь чуть-чуть лучше него.</p>
+    <p>А результат ролика не складывается, он <b>расходится по людям</b>. Один посмотрел и показал троим, те — девятерым, и каждый следующий тянет за собой следующих. Тут ничего не гасится: одна удачная развилка в начале умножается на всё, что идёт дальше. Поэтому почти все цепочки обрываются сразу, а редкая уходит в тысячи.</p>
+    <p>Отсюда и признак, по которому можно судить самому, ничего не считая. Если результат упирается в тебя одного — пробежал, решил, поднял, — попытки будут кучно лежать около обычного, и потолок близко. Если результат может пойти по людям — сделанное тобой посмотрели, показали другим, купили, — попытки разлетятся, и потолка у них нет.</p>
+    <p>Дальше нас интересует только второй случай. Раз попытки разлетаются, есть смысл спросить: а что это даёт тому, кто делает их много?</p>
+  </div>
+</section>
+
+<!-- 3 ——————————————————————————————— -->
+<section id="s11b" data-title="Число попыток">
+  <div class="wrap">
+    <p class="kicker">Акт II · Проверка</p>
+    <h2>Что даёт каждая следующая попытка</h2>
+    <p>Проверим прямо. Будем делать попытки — ролик, рассказ, задачу, дело — и записывать, насколько хорошо вышло. А следить будем только за одним: каков <em>лучший</em> результат из всех сделанных попыток. Сначала попытка одна, потом десять, потом сто, потом тысяча. Сверху величина из тех, что упираются в тебя одного, — назовём её колоколом, как называют форму её картинки. Снизу — та, что расходится по людям; её форму называют степенным законом.</p>
+    <div class="stage"><canvas id="cv-s11b"></canvas></div>
+    <div class="actbar"><button class="again" data-again="s11b">ещё раз</button><span class="tag">1 → 10 → 100 → 1000 попыток</span></div>
+    <p class="after">У колокола почти вся прибавка достаётся первому десятку попыток, а дальше упор в потолок: между сотней попыток и тысячей разницы уже почти нет — ×1,5 и ×1,6. У степенного закона наоборот: <b>каждое удесятерение числа попыток умножает лучший результат в несколько раз</b>, и остановиться негде — потолка-то нет. Шкале приходится отъезжать, и на последнем шаге полоска колокола просто исчезает: рядом с лучшей из тысячи попыток её уже не видно.</p>
+    <p class="after">И сразу убери мысль, которая тут напрашивается: «значит, где колокол, там стараться незачем». Наоборот. Смотри, почему у колокола тысяча попыток ничего не дала: разброс между попытками мал — сколько раз ни пробеги стометровку, быстрее самого себя ты не станешь. Значит, там остаётся единственный путь — сдвинуть все свои попытки разом, а это и есть тренировка. И платит она надёжно: нет хвоста, где всё решает удача, поэтому вложенное почти наверняка вернётся — секундами на секундомере, а не «может быть, когда-нибудь».</p>
+    <p class="after">И «потолок близко» не значит «дойти легко». От обычного человека до чемпиона всего ×1,5 — но эти полтора раза стоят лет работы, и на них держится весь спорт: побеждает тот, кто быстрее на два процента.</p>
+    <p class="after">Так что разница между законами не в том, надо ли стараться, а в том, чем платят. Под колоколом платят надёжно и понемногу: секундами, местами, процентами. Под степенным законом платят ненадёжно, зато без потолка — тут можно получить в сто раз больше, и никто не скажет заранее, сколько именно.</p>
+    <p class="after">Отсюда два следствия, ради которых всё и считалось. Первое: судить о себе по обычной попытке бессмысленно — обычных попыток больше всего, а весь результат приносят редкие удачные. Второе: <b>неудачная попытка стоит немного — ровно то, что ты в неё вложил, — а удачная не ограничена ничем</b>. Когда потери ограничены, а выигрыш нет, разумный ход один: делать попытки и не бросать после первых.</p>
+    <p class="after">И заметь: даже неудачная попытка теряется не полностью. Время ушло, а умение осталось. Вот на этом «осталось» и держится последняя глава.</p>
+  </div>
+</section>
+
+<!-- 4 ——————————————————————————————— -->
+<section id="s12" data-title="Складывается само">
+  <div class="wrap">
+    <p class="kicker">Акт III · Что остаётся в любом случае</p>
+    <h2>Единственное «богатый богатеет», которое запускаешь ты сам</h2>
+    <p>У разлетающихся величин есть общее правило, из которого и вырастает весь разброс: <b>у кого уже есть, тому легче получить ещё.</b> У ролика, который уже посмотрели, больше шансов, что его покажут дальше; к сайту, на который уже ссылаются, добавляют ещё ссылки. Просмотрами и подписчиками ты этим правилом не управляешь — там решают чужие случайности. Но есть величина, где им управляешь ты один: то, что ты умеешь.</p>
+    <p>Работает оно там буквально так же. Новое цепляется за понятое: пятую задачу такого же вида ты решаешь заметно быстрее первой — половина ходов уже знакома, думать надо только над остатком. Чем больше умеешь, тем быстрее прибавляется новое. То есть прибавка считается не от нуля, а от накопленного.</p>
+    <p>Чтобы это не осталось словами, возьмём величину, которую можно пересчитать по штукам: сколько слов ты знаешь в чужом языке. И два способа их набирать — оба честные, оба требуют времени каждый день.</p>
+    <p><b>Первый — учить по списку.</b> Пять новых слов в день, каждый день. Ни одно из них не помогает выучить следующее: пятисотое даётся ровно так же тяжело, как первое. <b>Второй — читать книжки, которые уже можешь читать.</b> Тут работает петля: чем больше слов знаешь, тем меньше незнакомых на странице; чем меньше незнакомых, тем больше страниц осиливаешь за вечер; чем больше страниц, тем больше новых слов поймал. Прибавка сама считается от накопленного. Начинают оба с пятисот слов.</p>
+    <div class="stage"><canvas id="cv-s12"></canvas></div>
+    <div class="actbar"><button class="again" data-again="s12">ещё раз</button><span class="tag">год, оба способа с 500 слов</span></div>
+    <p class="after">Через год по списку набирается 2300 слов, чтением — 6400. И вот в чём тут вся соль: <b>сначала чтение проигрывает.</b> В первый месяц оно приносит 3–4 слова в день против пяти по списку, и догоняет список только к сотому дню. Зато к концу года приносит уже по 45 слов в день — при том что делаешь ты ровно то же самое, что делал в первый день. Это и есть «у кого есть, тому дают ещё», только теперь видно в штуках.</p>
+    <p class="after">И то же самое не только со словами. Приёмы решения не просто складываются в стопку — они сочетаются друг с другом: пять приёмов дают десять пар, двадцать приёмов — сто девяносто. Выучил вдвое больше приёмов — доступных связок стало вчетверо больше. Это не красивые слова, это счёт.</p>
+    <p class="after">Отсюда мораль, и она из двух половин. Первая: <b>усилия можно тратить так, что они складываются в стопку, а можно так, что они цепляются друг за друга.</b> Труд одинаковый, а через год разница втрое — и дальше она только растёт. Поэтому про любое занятие стоит спрашивать себя: то, что я делаю сегодня, облегчит ли мне завтрашнее? Если да — ты запустил тот самый усилитель, и он твой, без чужих случайностей.</p>
+    <p class="after">Вторая половина: <b>по первым неделям судить нельзя.</b> Растущее от накопленного поначалу выглядит как «ничего не происходит» и честно проигрывает зубрёжке — целых сто дней. Бросают ровно там. А вся выгода лежит дальше.</p>
+    <p class="after">И теперь всё сходится. Отдельная попытка не обещает ничего: разброс огромен, и удачная приходит когда захочет. Но неудачная попытка не пропадает — она добавляет к накопленному, а накопленное растёт от самого себя. Это не обещание, что получится завтра. Это кое-что получше: <b>то, что ты вложил сегодня, завтра работает на тебя само</b> — и отнять это у тебя не может никто.</p>
+  </div>
+</section>
+
+<!-- итог ——————————————————————————————— -->
+<section id="s13" data-title="Что унести">
+  <div class="wrap">
+    <p class="kicker">Итог</p>
+    <h2>Что стоит унести</h2>
+    <ul class="take">
+      <li>Есть результаты, которые упираются в тебя одного, — пробежал, решил, поднял. Там все попытки лежат кучно около обычной, и потолок близко. И есть результаты, которые могут пойти по людям, — посмотрели, показали, купили. Там попытки разлетаются в сотни раз, и потолка нет.</li>
+      <li>Разлетаются они потому, что такой результат не складывается, а расходится: одна удачная развилка в начале умножается на всё, что идёт дальше. Складывающиеся причины друг друга гасят, расходящиеся — усиливают.</li>
+      <li>Поэтому решает число попыток. Там, где результат расходится, лучший из тысячи попыток в сотни раз больше, чем из одной. Там, где упирается в тебя, — почти тот же самый, и путь остаётся один: тренировка, зато платит она надёжно.</li>
+      <li>Судить о себе по обычной попытке бессмысленно: обычных попыток больше всего, а весь результат приносят редкие удачные.</li>
+      <li>Неудачная попытка стоит ровно того, что ты в неё вложил, а удачная не ограничена ничем. Когда потери ограничены, а выигрыш нет, разумный ход один: делать попытки и не бросать после первых.</li>
+      <li>И даже неудачная попытка не пропадает: время ушло, умение осталось. Умение — единственный усилитель, который растёт от самого себя, работает без чужих случайностей и которого у тебя не отнять.</li>
+      <li>Поэтому про любое занятие стоит спрашивать: то, что я делаю сегодня, облегчит ли мне завтрашнее? И не судить по первым неделям — растущее от накопленного сто дней выглядит как «ничего не происходит».</li>
+    </ul>
+    <hr class="rule">
+    <p class="fine">Дальше можно проверить самому: возьми что-нибудь, что ты уже делал много раз, — задачи, забеги, рисунки, партии, — и разложи результаты по порядку. Посмотри, во сколько раз лучший больше обычного. Если в полтора — ты в мире, где платят надёжно и понемногу. Если в сто — ты в мире, где решает число попыток, и бросать после первых неудач рано.</p>
+  </div>
+</section>
+
+<script>
+"use strict";
+/* ============================================================
+   Мини-каркас сцен: одна rAF-петля, рисует только активную сцену.
+   ============================================================ */
+const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SPEED = REDUCED ? 6 : 1;
+
+const C = {
+  ink:'#e8eef6', muted:'#93a1b1', dim:'#5d6b7c', line:'#243040',
+  blue:'#5ba8f5', gold:'#f0a83c', green:'#5fd38d', red:'#f2686c', violet:'#b98cf0',
+  bg:'#131923'
+};
+const SANS = 'ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif';
+
+const SUPD = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+function sup(n){ return String(n).split('').map(d => SUPD[+d] || d).join(''); }
+function fmt(n){ return Math.round(n).toLocaleString('ru-RU').replace(/,/g,' '); }
+function plural(n, one, few, many){      // 1 город, 2 города, 5 городов
+  const t = n % 100;
+  if(t >= 11 && t <= 14) return many;
+  const d = n % 10;
+  return d === 1 ? one : (d >= 2 && d <= 4 ? few : many);
+}
+function lerp(a,b,t){ return a + (b-a)*t; }
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function easeOut(t){ return 1 - Math.pow(1-t, 3); }
+function easeInOut(t){ return t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+function gauss(){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function pareto(a, xmin){ return xmin*Math.pow(Math.random(), -1/a); }
+
+function T(ctx, txt, x, y, o){
+  o = o || {};
+  ctx.save();
+  ctx.font = (o.weight||'400') + ' ' + (o.size||13) + 'px ' + (o.family||SANS);
+  ctx.fillStyle = o.color || C.muted;
+  ctx.textAlign = o.align || 'left';
+  ctx.textBaseline = o.base || 'alphabetic';
+  if(o.alpha != null) ctx.globalAlpha = o.alpha;
+  ctx.fillText(txt, x, y);
+  ctx.restore();
+}
+function line(ctx, x1,y1,x2,y2, color, w, dash){
+  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=w||1;
+  if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+}
+function rrect(ctx,x,y,w,h,r){
+  r = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+const SCENES = {};
+function defineScene(id, def){ SCENES[id] = { def:def, cv:document.getElementById('cv-'+id), ctx:null, st:null }; }
+
+function fit(s){
+  const cv = s.cv;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+  s.ctx = cv.getContext('2d');
+  s.ctx.setTransform(dpr,0,0,dpr,0,0);
+  s.W = w; s.H = h;
+}
+function initScene(s){
+  fit(s);
+  s.st = { t:0 };
+  if(s.def.init) s.def.init(s.st, s.W, s.H);
+}
+
+let activeId = null;
+function activate(id){
+  if(!SCENES[id]) return;
+  if(activeId === id) return;
+  activeId = id;
+  initScene(SCENES[id]);
+}
+
+let last = 0;
+function loop(ts){
+  if(!last) last = ts;
+  const dt = clamp((ts-last)/1000, 0, 0.05) * SPEED;
+  last = ts;
+  const s = SCENES[activeId];
+  if(s && s.ctx){
+    s.st.t += dt;
+    s.ctx.clearRect(0,0,s.W,s.H);
+    s.ctx.fillStyle = C.bg; s.ctx.fillRect(0,0,s.W,s.H);
+    s.def.draw(s.ctx, s.W, s.H, s.st, dt);
+    // досмотрел до конца — держим последний кадр и запускаем заново.
+    // сколько держать, решает сама сцена: где в финале есть что читать, восьми секунд мало
+    if(s.def.isDone && s.def.isDone(s.st)){
+      s.st.hold = (s.st.hold || 0) + dt;
+      if(s.st.hold > (s.def.holdSec || 8)) initScene(s);
+    }
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ============================================================
+   Сцена 11b — лучший результат из N попыток
+   ============================================================ */
+defineScene('s11b', {
+  holdSec: 12,
+  init(st){
+    const R = 300;                       // прогонов на каждую точку — берём медиану
+    function med(a){ a.sort((x,y)=>x-y); return a[a.length>>1]; }
+    function bestOf(f, N){
+      const b = [];
+      for(let r=0;r<R;r++){ let m = 0; for(let i=0;i<N;i++){ const v = f(); if(v > m) m = v; } b.push(m); }
+      return med(b);
+    }
+    const bell = () => Math.max(0.02, 1 + gauss()*0.2);
+    const pw   = () => pareto(1.3, 1);
+    st.NS   = [1, 10, 100, 1000];
+    st.bell = st.NS.map(n => bestOf(bell, n));
+    st.pow  = st.NS.map(n => bestOf(pw,   n));
+    st.k = 0; st.wait = 0; st.scale = st.pow[0]*1.08; st.grow = 0;
+  },
+  isDone(st){ return st.k >= 3 && st.wait > 2.4; },
+  draw(ctx, W, H, st, dt){
+    st.wait += dt;
+    if(st.wait > 2.2 && st.k < 3){ st.k++; st.wait = 0; }
+    st.grow = Math.min(1, st.grow + dt*1.6);
+    // шкала отъезжает не сразу: сперва видно, что полоска упёрлась в край и не влезает
+    if(st.wait > 0.5) st.scale = lerp(st.scale, st.pow[st.k]*1.08, clamp(dt*2.2, 0, 1));
+
+    const padL = clamp(W*0.17, 86, 150), padR = clamp(W*0.10, 54, 92);
+    const barW = W - padL - padR;
+    const barH = clamp(H*0.15, 30, 50);
+    const gap  = clamp(H*0.17, 34, 66);
+    const y0 = (H - (2*barH + gap))/2 + 12;
+
+    const fmtx = v => '×' + (v < 10 ? v.toFixed(1).replace('.', ',') : String(Math.round(v)));
+    const rows = [
+      {n:'колокол',   sub:'рост, вес',                v:st.bell[st.k], c:C.blue},
+      {n:'степенное', sub:'доход, аудитория, тираж',  v:st.pow[st.k],  c:C.gold}
+    ];
+    rows.forEach((r, i) => {
+      const y = y0 + i*(barH+gap);
+      ctx.fillStyle = '#1c2635';
+      ctx.beginPath(); rrect(ctx, padL, y, barW, barH, 6); ctx.fill();
+      const w = Math.max(1.5, barW*clamp(r.v*st.grow/st.scale, 0, 1));
+      ctx.fillStyle = r.c;
+      ctx.beginPath(); rrect(ctx, padL, y, w, barH, 6); ctx.fill();
+      T(ctx, r.n,   padL-12, y+barH*0.5+1,  {size:14,   color:r.c,  align:'right', weight:'600'});
+      T(ctx, r.sub, padL-12, y+barH*0.5+18, {size:10.5, color:C.dim, align:'right'});
+      T(ctx, fmtx(r.v), padL+w+10, y+barH*0.5+6, {size:16, color:r.c, weight:'600'});
+    });
+
+    T(ctx, 'попыток: ' + fmt(st.NS[st.k]), W/2, y0-22, {size:17, color:C.ink, align:'center', weight:'600'});
+    T(ctx, 'длина полоски — лучший результат из этих попыток', W/2, H-26,
+      {size:11.5, color:C.dim, align:'center'});
+    T(ctx, 'шкала отъезжает, чтобы он влез', W/2, H-10, {size:11.5, color:C.dim, align:'center'});
+  }
+});
+
+/* ============================================================
+   Сцена 12 — два способа набирать слова: по списку и чтением
+   ============================================================ */
+const W0 = 500, ADD = 5, RATE = 1.007;         // старт, слов в день по списку, рост при чтении
+const wLin = d => W0 + ADD*d;
+const wExp = d => W0*Math.pow(RATE, d);
+defineScene('s12', {
+  holdSec: 14,
+  init(st){ st.d = 0; },
+  isDone(st){ return st.d >= 365; },
+  draw(ctx, W, H, st, dt){
+    st.d = Math.min(365, st.d + dt*105);
+    const padL = 54, padR = clamp(W*0.20, 120, 190), top = 40, baseY = H-46;
+    const plotW = W-padL-padR, plotH = baseY-top;
+    const YMAX = 7000;
+    const xOf = d => padL + d/365*plotW;
+    const yOf = v => baseY - clamp(v/YMAX,0,1)*plotH;
+
+    for(let g=2000; g<=6000; g+=2000){
+      line(ctx, padL, yOf(g), W-padR, yOf(g), '#1c2635', 1);
+      T(ctx, fmt(g), padL-10, yOf(g)+4, {size:11, color:C.dim, align:'right'});
+    }
+    line(ctx, padL, baseY, W-padR, baseY, C.line, 1);
+    T(ctx, '↑ сколько слов ты знаешь', padL-44, top-14, {size:11.5, color:C.dim});
+    T(ctx, 'день ' + Math.round(st.d) + ' из 365', W-padR, top-14, {size:12, color:C.dim, align:'right'});
+
+    function curve(f, color, w){
+      ctx.strokeStyle = color; ctx.lineWidth = w; ctx.beginPath();
+      for(let d=0; d<=st.d; d+=2){ const x = xOf(d), y = yOf(f(d)); d?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+      ctx.stroke();
+    }
+    curve(wLin, '#7c8ca1', 2);
+    curve(wExp, C.green, 2.6);
+
+    // точка, где чтение догоняет список: до неё зелёная идёт МЕДЛЕННЕЕ серой
+    const CROSS = 97;
+    if(st.d > CROSS){
+      const cx = xOf(CROSS);
+      line(ctx, cx, yOf(wLin(CROSS))-6, cx, baseY, '#ffffff55', 1, [4,4]);
+      T(ctx, 'сотый день:', cx, yOf(wLin(CROSS))-24, {size:11.5, color:C.ink, align:'center'});
+      T(ctx, 'только сравнялись', cx, yOf(wLin(CROSS))-11, {size:11.5, color:C.ink, align:'center'});
+    }
+
+    // подписи едут за кончиками линий; пока линии рядом, разводим подписи по вертикали
+    const lx = Math.min(xOf(st.d) + 12, W-padR+12);
+    const yE = yOf(wExp(st.d)), yL = yOf(wLin(st.d));
+    let yTop = Math.min(yE, yL) - 8, yBot = Math.max(yE, yL) + 8;
+    if(yBot - yTop < 48){ const m = (yTop+yBot)/2; yTop = m-24; yBot = m+24; }
+    T(ctx, 'читаешь книжки', lx, yTop, {size:12.5, color:C.green, weight:'600'});
+    T(ctx, fmt(wExp(st.d)) + ' слов', lx, yTop+17, {size:11.5, color:C.green});
+    T(ctx, 'учишь по списку', lx, yBot, {size:12.5, color:'#7c8ca1'});
+    T(ctx, fmt(wLin(st.d)) + ' слов', lx, yBot+17, {size:11.5, color:C.dim});
+
+    const perDay = st.d < 30 ? '3–4 слова в день' : Math.round(wExp(st.d)*(RATE-1)) + ' слов в день';
+    T(ctx, 'по списку — всегда 5 слов в день; чтением — сейчас ' + perDay,
+      padL, H-12, {size:11.5, color:C.dim});
+  }
+});
+
+/* ============================================================
+   Сцена 4h — шестьдесят попыток одного человека.
+   Каждый столбик — один ролик; они выходят по очереди, и шкала
+   отъезжает каждый раз, когда выходит лучший, чем все прежние.
+   ============================================================ */
+const P4N = 60;
+defineScene('s4h', {
+  holdSec: 14,
+  init(st){
+    // просмотры у одной попытки: степенной закон, обычная попытка — около 200 человек
+    st.v = [];
+    for(let i=0;i<P4N;i++) st.v.push(Math.round(100*pareto(1, 1)));
+    st.k = 0; st.acc = 0;
+    st.scale = Math.max(400, st.v[0]*1.25);
+    st.flash = 0;
+    const s = st.v.slice().sort((a,b)=>a-b);
+    st.med = s[P4N>>1];
+    st.small = s.filter(x => x < 400).length;
+  },
+  isDone(st){ return st.k >= P4N; },
+  draw(ctx, W, H, st, dt){
+    st.acc += dt;
+    while(st.k < P4N && st.acc > 0.11){
+      st.acc -= 0.11;
+      const wasMax = st.k ? Math.max.apply(null, st.v.slice(0, st.k)) : 0;
+      st.k++;
+      if(st.v[st.k-1] > wasMax) st.flash = 0.5;
+    }
+    if(st.flash > 0) st.flash -= dt;
+
+    const shown = st.v.slice(0, Math.max(1, st.k));
+    const mx = Math.max.apply(null, shown);
+    const target = Math.max(400, mx*1.25);
+    st.scale = lerp(st.scale, target, 1-Math.pow(0.02, dt));
+
+    const padL = 62, padR = clamp(W*0.10, 40, 90), top = 44, baseY = H-46;
+    const plotW = W - padL - padR, plotH = baseY - top;
+    const slot = plotW/P4N;
+
+    // засечки по вертикали — иначе непонятно, во сколько раз отъехала шкала
+    const gs = Math.pow(10, Math.floor(Math.log10(st.scale/3)));
+    const step = st.scale/gs > 30 ? gs*10 : (st.scale/gs > 12 ? gs*5 : (st.scale/gs > 6 ? gs*2 : gs));
+    for(let v=step; v<=st.scale; v+=step){
+      const y = baseY - v/st.scale*plotH;
+      line(ctx, padL, y, W-padR, y, '#1c2635', 1);
+      T(ctx, fmt(v), padL-8, y+4, {size:10.5, color:C.dim, align:'right'});
+    }
+    line(ctx, padL, baseY, W-padR, baseY, C.line, 1);
+
+    let best = 0, bestI = 0;
+    for(let i=0;i<st.k;i++) if(st.v[i] > best){ best = st.v[i]; bestI = i; }
+    for(let i=0;i<st.k;i++){
+      const h = Math.max(1.2, st.v[i]/st.scale*plotH);
+      const x = padL + i*slot + slot*0.18;
+      const isBest = i === bestI;
+      ctx.fillStyle = isBest ? C.gold : 'rgba(91,168,245,.8)';
+      if(isBest && st.flash > 0) ctx.fillStyle = C.ink;
+      ctx.beginPath(); rrect(ctx, x, baseY-h, Math.max(1.6, slot*0.64), h, 1.5); ctx.fill();
+    }
+
+    T(ctx, '↑ сколько человек посмотрело', padL-8, top-24, {size:11, color:C.dim});
+    T(ctx, 'ролик ' + st.k + ' из ' + P4N, W-padR, top-24, {size:12, color:C.dim, align:'right'});
+    if(st.k < P4N)
+      T(ctx, 'ролики по порядку, как выходили →', W-padR, H-10, {size:11, color:C.dim, align:'right'});
+
+    // лучший подписываем прямо у столбика
+    if(st.k > 0){
+      const bh = best/st.scale*plotH;
+      const bx = padL + bestI*slot + slot*0.5;
+      T(ctx, fmt(best), Math.min(bx, W-padR-4), baseY-bh-8, {size:12.5, color:C.gold, align:'center', weight:'600'});
+    }
+
+    if(st.k >= P4N){
+      T(ctx, 'обычный ролик — ' + fmt(st.med) + ' ' +
+             plural(st.med, 'человек', 'человека', 'человек'),
+        padL, H-10, {size:11.5, color:C.muted});
+      T(ctx, 'лучший — это ×' + fmt(Math.round(best/st.med)),
+        W-padR, H-10, {size:11.5, color:C.gold, align:'right', weight:'600'});
+    }
+  }
+});
+
+/* ============================================================
+   Наблюдатели, навигация, кнопки
+   ============================================================ */
+const sections = Array.prototype.slice.call(document.querySelectorAll('section'));
+
+const dots = document.getElementById('dots');
+sections.forEach(sec => {
+  const b = document.createElement('button');
+  b.title = sec.dataset.title || '';
+  b.addEventListener('click', () => sec.scrollIntoView({behavior:'smooth', block:'start'}));
+  dots.appendChild(b);
+});
+const dotEls = Array.prototype.slice.call(dots.children);
+
+// появление текста
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: 0.12 });
+sections.forEach(s => io.observe(s));
+
+// активная сцена = та, чей центр ближе всего к центру экрана
+// (надёжнее порога пересечения: секция с длинным текстом может быть выше экрана)
+let cur = -1;
+function pickActive(){
+  const mid = window.innerHeight/2;
+  let best = 0, bestD = Infinity;
+  for(let i=0;i<sections.length;i++){
+    const r = sections[i].getBoundingClientRect();
+    const d = Math.abs((r.top + r.bottom)/2 - mid);
+    if(d < bestD){ bestD = d; best = i; }
+  }
+  if(best === cur) return;
+  cur = best;
+  dotEls.forEach((d,j) => d.classList.toggle('on', j === best));
+  const id = sections[best].id;
+  if(SCENES[id]) activate(id); else activeId = null;
+}
+
+document.querySelectorAll('.again').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const id = btn.dataset.again, s = SCENES[id];
+    if(!s) return;
+    if(s.def.again && s.st){ s.def.again(s.st); }
+    else { activeId = null; activate(id); }
+  });
+});
+
+const bar = document.getElementById('bar');
+let ticking = false;
+function onScroll(){
+  const max = document.body.scrollHeight - window.innerHeight;
+  bar.style.width = (max > 0 ? (window.scrollY/max*100) : 0) + '%';
+  if(!ticking){
+    ticking = true;
+    requestAnimationFrame(() => { ticking = false; pickActive(); });
+  }
+}
+window.addEventListener('scroll', onScroll, {passive:true});
+onScroll(); pickActive();
+
+let rt;
+window.addEventListener('resize', () => {
+  clearTimeout(rt);
+  rt = setTimeout(() => { const id = activeId; activeId = null; if(id) activate(id); }, 160);
+});
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

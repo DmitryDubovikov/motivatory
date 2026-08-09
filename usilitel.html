@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мир умножает фору</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --bg2:#131923;
+    --ink:#e8eef6;
+    --muted:#93a1b1;
+    --dim:#5d6b7c;
+    --blue:#5ba8f5;
+    --gold:#f0a83c;
+    --green:#5fd38d;
+    --red:#f2686c;
+    --violet:#b98cf0;
+    --line:#243040;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* ——— прогресс и навигация ——— */
+  #bar{position:fixed;top:0;left:0;height:2px;width:0;background:linear-gradient(90deg,var(--blue),var(--gold));z-index:50;transition:width .12s linear}
+  #dots{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:50;display:flex;flex-direction:column;gap:9px}
+  #dots button{
+    width:8px;height:8px;padding:0;border:0;border-radius:50%;
+    background:#2b3746;cursor:pointer;transition:background .25s, transform .25s;
+  }
+  #dots button:hover{background:#4a5a6c}
+  #dots button.on{background:var(--ink);transform:scale(1.45)}
+  @media (max-width:760px){#dots{display:none}}
+
+  /* ——— сцены ——— */
+  section{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:8vh 20px;position:relative;
+  }
+  .wrap{width:100%;max-width:940px}
+  .wrap > *{opacity:0;transform:translateY(14px);transition:opacity .7s ease,transform .7s ease}
+  section.in .wrap > *{opacity:1;transform:none}
+  section.in .wrap > *:nth-child(2){transition-delay:.08s}
+  section.in .wrap > *:nth-child(3){transition-delay:.16s}
+  section.in .wrap > *:nth-child(4){transition-delay:.24s}
+  section.in .wrap > *:nth-child(5){transition-delay:.32s}
+
+  .kicker{
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--dim);margin:0 0 14px;
+  }
+  h1{font-size:clamp(38px,7vw,68px);line-height:1.03;margin:0 0 22px;font-weight:400;letter-spacing:-.02em}
+  h2{font-size:clamp(26px,4.2vw,40px);line-height:1.12;margin:0 0 20px;font-weight:400;letter-spacing:-.01em}
+  p{font-size:clamp(17px,2vw,20.5px);line-height:1.62;color:#cfdae6;margin:0 0 16px;max-width:47em}
+  p.after{color:var(--muted);font-size:clamp(16px,1.8vw,18.5px)}
+  .lead{font-size:clamp(19px,2.3vw,23px);color:#dae4ef}
+  em{color:var(--ink);font-style:italic}
+  b{font-weight:600;color:#fff}
+  .fine{font-size:15px;color:var(--dim);line-height:1.5}
+  .stage{width:100%;height:clamp(250px,44vh,420px);margin:22px 0 20px;position:relative}
+  canvas{width:100%;height:100%;display:block;border-radius:10px;background:var(--bg2)}
+  .again{
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:13.5px;color:var(--muted);background:transparent;
+    border:1px solid var(--line);border-radius:999px;padding:7px 16px;cursor:pointer;
+    transition:color .2s,border-color .2s;margin:0 0 18px;
+  }
+  .again:hover{color:var(--ink);border-color:#3d4c5e}
+  .actbar{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  .tag{
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+  }
+  .rule{height:1px;background:var(--line);border:0;margin:34px 0 30px;max-width:47em}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:47em;margin:4px 0 18px}
+  @media (max-width:640px){.two{grid-template-columns:1fr}}
+  .col{border:1px solid var(--line);border-radius:10px;padding:15px 18px 16px;background:var(--bg2)}
+  .col h3{margin:0 0 9px;font-size:19px;font-weight:600;letter-spacing:0}
+  .col ul{list-style:none;margin:0;padding:0}
+  .col li{font-size:16.5px;line-height:1.5;color:#cfdae6;padding:4px 0 4px 15px;position:relative}
+  .col li:before{content:"·";position:absolute;left:2px;color:var(--dim)}
+  .col .note{font-size:14.5px;color:var(--muted);margin:11px 0 0;line-height:1.45;max-width:none}
+  ul.take{list-style:none;padding:0;margin:0;max-width:47em}
+  ul.take li{
+    font-size:clamp(17px,2vw,20px);line-height:1.55;color:#cfdae6;
+    padding:14px 0 14px 22px;border-top:1px solid var(--line);position:relative;
+  }
+  ul.take li:before{content:"—";position:absolute;left:0;color:var(--dim)}
+  .scrollhint{
+    position:absolute;bottom:26px;left:50%;transform:translateX(-50%);
+    font-family:ui-sans-serif,-apple-system,sans-serif;font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--dim);animation:bob 2.4s ease-in-out infinite;
+  }
+  @keyframes bob{0%,100%{transform:translate(-50%,0);opacity:.55}50%{transform:translate(-50%,7px);opacity:1}}
+</style>
+</head>
+<body>
+
+<div id="bar"></div>
+<nav id="dots"></nav>
+
+<!-- 1 ——————————————————————————————— -->
+<section id="s8" data-title="Усилитель">
+  <div class="wrap">
+    <p class="kicker">Двадцать игроков, и никто не сильнее</p>
+    <h1>Мир умножает фору</h1>
+    <p class="lead">Двадцать игроков, у каждого ровно одна монета. Каждый ход одна новая монета достаётся кому-то одному, и шанс получить её тем больше, чем больше монет у игрока уже есть. Никто не умнее, никто не старается больше — правила буквально одинаковые для всех. За фиолетовым будем следить отдельно. Смотри, что будет через семьсот ходов.</p>
+    <div class="stage"><canvas id="cv-s8"></canvas></div>
+    <div class="actbar"><button class="again" data-again="s8">ещё раз</button><span class="tag">запусти несколько раз — победитель меняется</span></div>
+    <p class="after">Внизу написано, во сколько раз у самого богатого больше, чем у самого бедного, — и это не полтора раза и не два. А ведь отличить игроков было нечем: разошлись они только потому, что кому-то в первых ходах случайно досталась одна лишняя монета. Правило превратило крошечный отрыв в отрыв в разы. Такую картинку — почти все внизу, а у одного-двух в десятки раз больше — называют <b>длинным хвостом</b>, или <b>правым хвостом</b>: справа от толпы тянется редкий, но очень далёкий край. Дальше мы будем говорить просто «хвост».</p>
+    <p class="after">Само правило простое: <b>у кого уже есть, тому легче получить ещё.</b> <span class="fine">(У него есть имя — эффект Матфея, по строчке из Евангелия «всякому имеющему дастся»; но нам важно не имя, а то, что оно делает.)</span> Так растут ссылки на сайты, ссылки в научных статьях, население городов, подписчики — везде, где новое достаётся тем, у кого уже что-то есть. Будем называть это правило усилителем.</p>
+    <p class="after">Здесь фора взялась из везения: игроки-то одинаковые. Но усилителю всё равно, откуда у тебя фора, — <b>он умножает любую</b>. А фору можно и сделать: раньше начать, больше сделать, сделать лучше. Вот почему в таком мире усилие окупается не по чуть-чуть: мир берёт то, что ты добавил, и умножает.</p>
+  </div>
+</section>
+
+<!-- 2 ——————————————————————————————— -->
+<section id="s9" data-title="Кто раньше">
+  <div class="wrap">
+    <p class="kicker">Акт I · Откуда ещё берётся фора</p>
+    <h2>Кто подключился раньше</h2>
+    <p>У форы есть и второй источник — момент прихода. Тут удобно говорить про сети. Сеть — это точки, соединённые связями: города и дороги, аэропорты и рейсы, сайты и ссылки. Точку в сети называют <b>узлом</b>.</p>
+    <p>Растёт сеть так: приходит новый узел и цепляется к тому, у кого уже много связей, — к большому городу ведёт больше дорог, на известный сайт ставят больше ссылок. Тот же усилитель, только вместо монет связи. На рисунке ранние узлы оказываются в середине и нарисованы жёлтым, поздние — по краю и синие, а размер точки показывает, сколько у неё связей.</p>
+    <div class="stage"><canvas id="cv-s9"></canvas></div>
+    <div class="actbar"><button class="again" data-again="s9">ещё раз</button></div>
+    <p class="after">Обведены две группы: первые двенадцать узлов, пришедшие в сеть, и последние двенадцать. Они устроены совершенно одинаково — вся разница в том, что первые уже были на месте, когда подключались остальные. Посмотри внизу на среднее число связей: у ранних их в несколько раз больше. Отдельному узлу может не повезти, но в среднем ранний обгоняет позднего просто за счёт момента прихода.</p>
+    <p class="after">Отсюда напрашивается мысль «значит, я опоздал» — и она неверна. Сеть на свете не одна. В ту, что уже выросла, рано прийти нельзя: там все места в середине заняты. Зато каждый год начинается что-то, где ранних узлов ещё нет вовсе: новое дело, новый инструмент, новая игра, о которой пока почти никто не знает. И вот что тут главное: <b>ранним узлом не рождаются, им становятся</b> — тот, кто смотрит по сторонам и пробует новое, оказывается ранним раз за разом. Момент прихода выглядит как везение, а на деле это результат того, куда ты смотришь и сколько пробуешь.</p>
+  </div>
+</section>
+
+<!-- 3 ——————————————————————————————— -->
+<section id="s7" data-title="Оговорка">
+  <div class="wrap">
+    <p class="kicker">Акт II · Честная оговорка</p>
+    <h2>Чего усилие не даёт</h2>
+    <p>Пора сказать честную вещь — ту, без которой первая же неудача собьёт с ног. Из всего сказанного напрашивается обещание: <em>просто старайся — и окажешься в правом хвосте, там, где у людей в разы больше остальных.</em> Обещания тут нет ни у кого.</p>
+    <p>Мы же только что видели: усилитель умножает любую фору, в том числе доставшуюся даром. Значит, в правом хвосте рядом с тобой окажутся и те, кто просто вовремя оказался в нужном месте, — а ты можешь стараться и в этот раз туда не попасть.</p>
+    <div class="stage"><canvas id="cv-s7"></canvas></div>
+    <p class="after">Так что слово «просто» из этой фразы придётся вычеркнуть, а всё остальное остаётся: вправо идут те, кто делает больше и по-своему, — только не каждый раз и не по расписанию.</p>
+    <p class="after">И тогда вопрос из «правда ли это?» становится вопросом «насколько сильно это работает?» — а на такой вопрос можно ответить числом. Возьмём ту же игру с монетами, дадим тебе настоящее преимущество — ты стараешься, и тебя замечают чаще остальных, — и прогоним твою жизнь с самого начала четыреста раз. Посмотрим, во сколько раз усилие поднимает шансы.</p>
+  </div>
+</section>
+
+<!-- 4 ——————————————————————————————— -->
+<section id="s10" data-title="Параллельные миры">
+  <div class="wrap">
+    <p class="kicker">Акт II</p>
+    <h2>Четыреста параллельных миров</h2>
+    <p>Вот обещанная проверка. Фиолетовый игрок — теперь ты. Один квадратик внизу — один прогон игры от начала до конца, одна прожитая жизнь: тот же ты, то же самое старание, другие случайности в первых ходах.</p>
+    <p>Полей два, и отличаются они ровно одним. Слева ты стараешься: тебя замечают на четверть чаще остальных. Справа — нет, ты такой же, как все девятнадцать. В каждом поле по четыреста миров, и заполняются они одновременно, чтобы можно было честно сравнить глазами.</p>
+    <p>Цвет квадратика говорит, чем в том мире кончилось. <b>Серый</b> — тебе досталось примерно столько, сколько вышло бы, если бы двадцать игроков просто поделили монеты поровну. <b>Красный</b> — меньше, и чем гуще красный, тем меньше. <b>Зелёный</b> — больше, и чем гуще зелёный, тем больше. А <b>белой рамкой</b> обведены миры, где монет у тебя вышло больше всех.</p>
+    <div class="stage"><canvas id="cv-s10"></canvas></div>
+    <div class="actbar"><button class="again" data-again="s10">ещё раз</button><span class="tag">два поля по 400 миров, слева со старанием</span></div>
+    <p class="after">Сравни поля целиком, не разглядывая отдельные клетки. Слева заметно больше зелени и заметно больше белых рамок: <b>монет у тебя больше всех в несколько раз чаще, чем без старания.</b> И заметь, какой ценой: прибавка-то скромная, всего четверть внимания, — а верхних миров прибавилось несравнимо больше. Усилитель берёт эту четверть и умножает. Без старания на первое место можно попросту не рассчитывать.</p>
+    <p class="after">Посмотри теперь на красное. Справа его больше половины поля, слева — заметно меньше. Значит, работает старание с обоих концов: и наверх поднимает, и от самого низа уводит.</p>
+    <p class="after">И оговорка, ровно та, о которой мы договорились: гарантии нет. Почти в четырёх мирах из десяти — с тем же самым старанием — тебе всё равно достаётся меньше, чем если бы двадцать игроков просто поделили монеты поровну. <b>Старание — не билет, а множитель шансов.</b></p>
+    <p class="after">Зато множитель — это много, и вот чем всё кончается на самом деле. В жизни попытка не одна: не один ролик, не одна книга, не одно дело. Со старанием ты выходишь вперёд примерно в каждом пятом мире, без него — в каждом двадцатом. Посчитаем, каков шанс, что получится <em>хотя бы раз</em>, если попыток десять: со старанием — почти девять шансов из десяти, без старания — меньше половины.</p>
+    <p class="after">Вот честная фраза целиком: <b>одна попытка не гарантирует ничего никому — но если стараться и делать попытку за попыткой, получится почти наверняка.</b></p>
+  </div>
+</section>
+
+<!-- 5 ——————————————————————————————— -->
+<section id="s11" data-title="Кривая сдвигается">
+  <div class="wrap">
+    <p class="kicker">Акт III · Что на самом деле в твоих руках</p>
+    <h2>Старание двигает всю кривую</h2>
+    <p>Раз множитель — посмотрим, что именно он умножает. Работа делает не совсем то, что ей приписывают, и то, что она делает, надёжнее.</p>
+    <p>На картинке — все исходы, которые с тобой могут случиться. По горизонтали: насколько хорошо получилось — скажем, скольким людям пригодилось то, что ты сделал. По вертикали: как часто выпадает именно такой исход. Билетов в правый хвост не продают никому — зато работа берёт всю кривую целиком и двигает её вправо: обычный день становится чуть лучше, а редкий отличный исход — заметно чаще. И заметь, где прибавка больше: у обычного дня она скромная, а вот закрашенного хвоста становится в разы больше. Это и есть тот самый множитель, только теперь видно, к чему он приложен.</p>
+    <div class="stage"><canvas id="cv-s11"></canvas></div>
+    <div class="actbar"><button class="again" data-again="s11">ещё раз</button></div>
+    <p class="after">И ещё одно, чего на графике не видно. Шанс приходит ко многим и почти всегда неожиданно: позвали, предложили, попалось на глаза. Разница между людьми чаще не в том, пришёл ли шанс, а в том, было ли чем его удержать — умеешь ли ты то, что для этого нужно, уже сегодня.</p>
+    <p class="after">Вот и вся мораль, и она короткая. Ждать нечего: усилитель работает всегда и умножает то, что у тебя есть на руках, — а сколько у тебя на руках, решаешь ты. Обещания при этом никто не даёт: в отдельном мире может не получиться, и это не значит, что ты сделал что-то не так. Но кривая, по которой тебе выпадает, — твоя, и сдвинуть её вправо можешь только ты.</p>
+  </div>
+</section>
+
+<!-- итог ——————————————————————————————— -->
+<section id="s13" data-title="Что унести">
+  <div class="wrap">
+    <p class="kicker">Итог</p>
+    <h2>Что стоит унести</h2>
+    <ul class="take">
+      <li>Мир работает как усилитель: у кого уже есть — тому легче получить ещё. В игре с монетами это видно в чистом виде: игроки одинаковые, правила одинаковые, а разрыв к концу — в десятки раз.</li>
+      <li>Усилитель умножает <em>любую</em> фору, в том числе доставшуюся даром. Отсюда сразу два следствия: рядом с тобой наверху окажутся и везучие — и то, что ты добавил сам, тоже будет умножено.</li>
+      <li>Фору даёт и ранний приход. В выросшую сеть рано прийти нельзя, но каждый год начинается что-то, где ранних ещё нет вовсе. Ранним не рождаются, им становятся: смотри по сторонам и пробуй новое.</li>
+      <li>Гарантий не даёт никто: билетов в правый хвост не продают. Старание — не билет, а множитель шансов. Даже с ним почти в четырёх мирах из десяти получается меньше, чем если бы всё поделили поровну.</li>
+      <li>Зато множитель — это много. Четверть добавленного внимания превращается в первое место в несколько раз чаще. И если попытка не одна: со старанием получается хотя бы раз почти в девяти случаях из десяти, без него — меньше чем в половине.</li>
+      <li>Работа не выдаёт билет, а двигает вправо всю твою кривую: обычный день чуть лучше, редкий отличный исход в разы чаще. Шанс приходит ко многим и неожиданно — удержит его тот, у кого уже есть чем.</li>
+    </ul>
+    <hr class="rule">
+    <p class="fine">Дальше можно проверить самому: возьми что-нибудь, где у людей вокруг очень по-разному — подписчики у знакомых, очки в игре, места на соревнованиях, — и поищи, с чего начался отрыв у тех, кто наверху. Почти всегда найдётся крошечная фора в самом начале: пришёл раньше, попробовал первым, сделал на один раз больше. Усилитель занимался остальным.</p>
+  </div>
+</section>
+
+<script>
+"use strict";
+/* ============================================================
+   Мини-каркас сцен: одна rAF-петля, рисует только активную сцену.
+   ============================================================ */
+const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SPEED = REDUCED ? 6 : 1;
+
+const C = {
+  ink:'#e8eef6', muted:'#93a1b1', dim:'#5d6b7c', line:'#243040',
+  blue:'#5ba8f5', gold:'#f0a83c', green:'#5fd38d', red:'#f2686c', violet:'#b98cf0',
+  bg:'#131923'
+};
+const SANS = 'ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif';
+
+const SUPD = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+function sup(n){ return String(n).split('').map(d => SUPD[+d] || d).join(''); }
+function fmt(n){ return Math.round(n).toLocaleString('ru-RU').replace(/,/g,' '); }
+function plural(n, one, few, many){      // 1 город, 2 города, 5 городов
+  const t = n % 100;
+  if(t >= 11 && t <= 14) return many;
+  const d = n % 10;
+  return d === 1 ? one : (d >= 2 && d <= 4 ? few : many);
+}
+function lerp(a,b,t){ return a + (b-a)*t; }
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function easeOut(t){ return 1 - Math.pow(1-t, 3); }
+function easeInOut(t){ return t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+function gauss(){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function pareto(a, xmin){ return xmin*Math.pow(Math.random(), -1/a); }
+
+function T(ctx, txt, x, y, o){
+  o = o || {};
+  ctx.save();
+  ctx.font = (o.weight||'400') + ' ' + (o.size||13) + 'px ' + (o.family||SANS);
+  ctx.fillStyle = o.color || C.muted;
+  ctx.textAlign = o.align || 'left';
+  ctx.textBaseline = o.base || 'alphabetic';
+  if(o.alpha != null) ctx.globalAlpha = o.alpha;
+  ctx.fillText(txt, x, y);
+  ctx.restore();
+}
+function line(ctx, x1,y1,x2,y2, color, w, dash){
+  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=w||1;
+  if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+}
+function rrect(ctx,x,y,w,h,r){
+  r = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+const SCENES = {};
+function defineScene(id, def){ SCENES[id] = { def:def, cv:document.getElementById('cv-'+id), ctx:null, st:null }; }
+
+function fit(s){
+  const cv = s.cv;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+  s.ctx = cv.getContext('2d');
+  s.ctx.setTransform(dpr,0,0,dpr,0,0);
+  s.W = w; s.H = h;
+}
+function initScene(s){
+  fit(s);
+  s.st = { t:0 };
+  if(s.def.init) s.def.init(s.st, s.W, s.H);
+}
+
+let activeId = null;
+function activate(id){
+  if(!SCENES[id]) return;
+  if(activeId === id) return;
+  activeId = id;
+  initScene(SCENES[id]);
+}
+
+let last = 0;
+function loop(ts){
+  if(!last) last = ts;
+  const dt = clamp((ts-last)/1000, 0, 0.05) * SPEED;
+  last = ts;
+  const s = SCENES[activeId];
+  if(s && s.ctx){
+    s.st.t += dt;
+    s.ctx.clearRect(0,0,s.W,s.H);
+    s.ctx.fillStyle = C.bg; s.ctx.fillRect(0,0,s.W,s.H);
+    s.def.draw(s.ctx, s.W, s.H, s.st, dt);
+    // досмотрел до конца — держим последний кадр и запускаем заново.
+    // сколько держать, решает сама сцена: где в финале есть что читать, восьми секунд мало
+    if(s.def.isDone && s.def.isDone(s.st)){
+      s.st.hold = (s.st.hold || 0) + dt;
+      if(s.st.hold > (s.def.holdSec || 8)) initScene(s);
+    }
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ============================================================
+   Сцена 8 — «у кого есть, тому дают ещё»
+   ============================================================ */
+defineScene('s8', {
+  init(st){
+    st.n = 20; st.hero = 7;
+    st.coins = new Array(st.n).fill(1);
+    st.total = st.n; st.step = 0; st.acc = 0; st.flash = -1; st.flashT = 0;
+    st.max = 1;
+  },
+  isDone(st){ return st.step >= 700; },
+  draw(ctx, W, H, st, dt){
+    const padL = 30, padR = 30, top = 46, baseY = H-46;
+    const plotH = baseY-top, plotW = W-padL-padR;
+    const slot = plotW/st.n;
+
+    // темп: сначала медленно, потом всё быстрее
+    const interval = Math.max(0.005, 0.34*Math.pow(0.945, st.step));
+    st.acc += dt;
+    while(st.step < 700 && st.acc > interval){
+      st.acc -= interval;
+      let r = Math.random()*st.total, i = 0;
+      while(r > st.coins[i] && i < st.n-1){ r -= st.coins[i]; i++; }
+      st.coins[i]++; st.total++; st.step++;
+      st.flash = i; st.flashT = 0.28;
+      if(st.coins[i] > st.max) st.max = st.coins[i];
+    }
+    if(st.flashT > 0) st.flashT -= dt;
+
+    for(let i=0;i<st.n;i++){
+      const h = st.coins[i]/st.max*plotH;
+      const x = padL + i*slot + slot*0.16;
+      const w = slot*0.68;
+      const isHero = i === st.hero;
+      ctx.fillStyle = isHero ? C.violet : 'rgba(91,168,245,.8)';
+      if(st.flash === i && st.flashT > 0) ctx.fillStyle = C.gold;
+      ctx.beginPath(); rrect(ctx, x, baseY-h, w, Math.max(2,h), 2); ctx.fill();
+      if(st.coins[i] > st.max*0.28 || isHero)
+        T(ctx, st.coins[i], x+w/2, baseY-h-7, {size:11.5, color: isHero?C.violet:C.muted, align:'center'});
+      if(isHero) T(ctx, 'следим', x+w/2, baseY+18, {size:12, color:C.violet, align:'center'});
+    }
+    line(ctx, padL-8, baseY, W-padR+8, baseY, C.line, 1);
+
+    T(ctx, 'высота столбика — сколько монет у игрока · правила у всех одинаковые',
+      padL, top-16, {size:12, color:C.dim});
+    T(ctx, 'ход ' + st.step, W-padR, top-16, {size:12, color:C.dim, align:'right'});
+
+    if(st.step >= 700){
+      const mn = Math.min.apply(null, st.coins);
+      T(ctx, 'у самого богатого в ' + Math.round(st.max/mn) + ' раз больше, чем у самого бедного',
+        W/2, H-10, {size:13, color:C.gold, align:'center'});
+    }
+  }
+});
+
+/* ============================================================
+   Сцена 9 — сеть с предпочтительным присоединением
+   ============================================================ */
+defineScene('s9', {
+  init(st, W, H){
+    st.N = 150; st.n = 1; st.acc = 0;
+    st.deg = [1]; st.edges = []; st.total = 1;
+    st.G = 12;                     // сравниваем группы, а не двух случайных узлов:
+                                   // у одного узла разброс слишком велик, чтобы что-то доказывать
+    st.Rx = W*0.40; st.Ry = H*0.38;
+  },
+  isDone(st){ return st.n >= st.N; },
+  draw(ctx, W, H, st, dt){
+    const cx = W/2, cy = H/2 + 6;
+    const GA = Math.PI*(3-Math.sqrt(5));
+    const pos = i => {
+      const r = Math.sqrt((i+0.6)/st.N);
+      return [cx + Math.cos(i*GA)*r*st.Rx, cy + Math.sin(i*GA)*r*st.Ry];
+    };
+
+    st.acc += dt;
+    while(st.n < st.N && st.acc > 0.028){
+      st.acc -= 0.028;
+      let r = Math.random()*st.total, j = 0;
+      while(r > st.deg[j] && j < st.n-1){ r -= st.deg[j]; j++; }
+      st.edges.push([st.n, j]);
+      st.deg[st.n] = 1; st.deg[j]++; st.total += 2;
+      st.n++;
+    }
+
+    // рёбра
+    ctx.strokeStyle = 'rgba(93,107,124,.28)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    st.edges.forEach(e => {
+      const a = pos(e[0]), b = pos(e[1]);
+      ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]);
+    });
+    ctx.stroke();
+
+    // узлы
+    for(let i=0;i<st.n;i++){
+      const p = pos(i), d = st.deg[i]||1;
+      const rr = 2.2 + 2.0*Math.sqrt(d-1);
+      const early = 1 - i/st.N;
+      ctx.fillStyle = 'rgba(' + Math.round(lerp(110,240,early)) + ',' +
+                      Math.round(lerp(140,168,early)) + ',' +
+                      Math.round(lerp(190,60,early)) + ',.9)';
+      ctx.beginPath(); ctx.arc(p[0],p[1],rr,0,7); ctx.fill();
+    }
+
+    // обводим первых и последних, чтобы было видно, кого сравниваем
+    function ring(i, color){
+      if(i >= st.n) return;
+      const p = pos(i), d = st.deg[i] || 1;
+      ctx.strokeStyle = color; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(p[0], p[1], 3.6 + 2.0*Math.sqrt(d-1) + 5, 0, 7); ctx.stroke();
+    }
+    for(let i=0;i<st.G;i++) ring(i, 'rgba(240,168,60,.8)');
+    for(let i=st.N-st.G;i<st.N;i++) ring(i, 'rgba(91,168,245,.8)');
+
+    if(st.n >= st.N){
+      let e = 0, l = 0;
+      for(let i=0;i<st.G;i++) e += st.deg[i];
+      for(let i=st.N-st.G;i<st.N;i++) l += st.deg[i];
+      const dec = v => String(Math.round(v*10)/10).replace('.', ',');
+      T(ctx, 'первые ' + st.G + ' узлов: в среднем ' + dec(e/st.G) + ' связи на узел',
+        22, H-30, {size:12, color:C.gold});
+      T(ctx, 'последние ' + st.G + ': в среднем ' + dec(l/st.G),
+        22, H-12, {size:12, color:C.blue});
+    } else {
+      T(ctx, 'узлов: ' + st.n, 22, H-12, {size:11.5, color:C.dim});
+    }
+    T(ctx, 'чем раньше узел пришёл в сеть, тем он желтее', W-22, H-12,
+      {size:11.5, color:C.dim, align:'right'});
+  }
+});
+
+/* ============================================================
+   Сцена 7 — ловушка
+   ============================================================ */
+defineScene('s7', {
+  isDone(st){ return st.p > 3.6; },
+  init(st, W, H){
+    st.p = 0;
+    st.crowd = [];
+    for(let i=0;i<260;i++){
+      const u = Math.pow(Math.random(), 2.1);
+      st.crowd.push({ x: u, y: Math.random(), d: Math.random() });
+    }
+  },
+  draw(ctx, W, H, st, dt){
+    st.p += dt*0.32;
+    const padL = 40, padR = 40, baseY = H-46, top = 46;
+    const plotW = W-padL-padR;
+    const xOf = u => padL + u*plotW;
+
+    // силуэт кривой
+    ctx.strokeStyle = '#2b3a4d'; ctx.lineWidth = 1.5; ctx.beginPath();
+    for(let p=0;p<=200;p++){
+      const u = p/200;
+      const h = Math.pow(0.06/(u*0.9+0.06), 2.0);
+      ctx.lineTo(xOf(u), baseY - h*(baseY-top)*0.95);
+    }
+    ctx.stroke();
+
+    // толпа
+    const app = clamp(st.p*1.6, 0, 1);
+    st.crowd.forEach((c,i) => {
+      if(i/st.crowd.length > app) return;
+      const h = Math.pow(0.06/(c.x*0.9+0.06), 2.0)*(baseY-top)*0.95;
+      const y = baseY - c.y*h*0.92 - 2;
+      ctx.fillStyle = 'rgba(147,161,177,'+(0.3+c.d*0.4)+')';
+      ctx.beginPath(); ctx.arc(xOf(c.x), y, 2.1, 0, 7); ctx.fill();
+    });
+    line(ctx, padL-10, baseY, W-padR+10, baseY, C.line, 1);
+
+    // звезда в хвосте
+    const starX = xOf(0.93), starY = baseY - 26;
+    if(st.p > 0.5){
+      const a = clamp((st.p-0.5)*2,0,1);
+      const tw = 0.8 + 0.2*Math.sin(st.p*5);
+      ctx.save(); ctx.globalAlpha = a;
+      ctx.fillStyle = C.gold;
+      star(ctx, starX, starY, 14*tw, 5);
+      ctx.restore();
+      T(ctx, 'правый хвост', starX, baseY+20, {size:12.5, color:C.gold, align:'center', alpha:a});
+    }
+    T(ctx, 'толпа', xOf(0.08), baseY+20, {size:12.5, color:C.muted, align:'center'});
+    T(ctx, 'каждая серая точка — один человек', padL-10, top-14, {size:11.5, color:C.dim});
+    T(ctx, 'сколько у него подписчиков →', W-padR+10, H-10, {size:11.5, color:C.dim, align:'right'});
+
+    // стрелка «просто старайся»
+    if(st.p > 0.85){
+      const a = clamp((st.p-0.85)*1.6,0,1);
+      const fade = st.p > 2.2 ? clamp(1-(st.p-2.2), 0.25, 1) : 1;
+      ctx.save(); ctx.globalAlpha = a*fade;
+      ctx.strokeStyle = C.green; ctx.lineWidth = 2;
+      const ax = xOf(0.14), ay = baseY-30, bx = starX-20, by = starY-20;
+      ctx.beginPath(); ctx.moveTo(ax, ay);
+      ctx.quadraticCurveTo((ax+bx)/2, ay - 86, bx, by); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx-11,by-3); ctx.lineTo(bx-4,by+9);
+      ctx.closePath(); ctx.fillStyle = C.green; ctx.fill();
+      T(ctx, 'делать больше и не как все', (ax+bx)/2, ay-64, {size:14, color:C.green, align:'center', weight:'600'});
+      ctx.restore();
+    }
+    // вопрос — над всей картинкой, чтобы не толкаться со звездой
+    if(st.p > 2.3){
+      const a = clamp((st.p-2.3)*1.2,0,1);
+      T(ctx, '?', W/2, top+52, {size:46, color:C.gold, align:'center', alpha:a, weight:'600'});
+      T(ctx, 'насколько сильно это работает?', W/2, top+18, {size:15, color:C.gold, align:'center', alpha:a});
+    }
+  }
+});
+function star(ctx, cx, cy, r, n){
+  ctx.beginPath();
+  for(let i=0;i<n*2;i++){
+    const rr = i%2 ? r*0.42 : r;
+    const a = -Math.PI/2 + i*Math.PI/n;
+    const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr;
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  }
+  ctx.closePath(); ctx.fill();
+}
+
+/* ============================================================
+   Сцена 10 — 400 параллельных миров
+   ============================================================ */
+const EFFORT = 1.25;   // «ты стараешься»: тебя замечают чаще остальных
+function runWorld(agents, ticks, eff){
+  const c = new Array(agents).fill(1);
+  let wtot = agents - 1 + eff;            // герой = индекс 0, его вес × eff
+  for(let s=0;s<ticks;s++){
+    let r = Math.random()*wtot, i = 0;
+    while(true){
+      const w = i===0 ? c[0]*eff : c[i];
+      if(r <= w || i === agents-1) break;
+      r -= w; i++;
+    }
+    c[i]++;
+    wtot += (i===0 ? eff : 1);
+  }
+  let tot = 0, best = 0;
+  for(let i=0;i<agents;i++){ tot += c[i]; if(c[i] > best) best = c[i]; }
+  return { share: c[0]/tot, top: c[0] === best };
+}
+// Цвет мира — расходящаяся шкала с якорем на «поделили поровну» (1/20 монет).
+// Ниже якоря — красное, тем гуще, чем хуже; на якоре — серое; выше — зелёное.
+const EQ = 1/20, GTOP = 0.16;
+function worldColor(share){
+  const rgb = (a,b,t) => 'rgb(' + Math.round(lerp(a[0],b[0],t)) + ',' +
+                                  Math.round(lerp(a[1],b[1],t)) + ',' +
+                                  Math.round(lerp(a[2],b[2],t)) + ')';
+  const RED = [208,69,63], MID = [124,140,157], GRN = [78,207,135];
+  // к «поровну» тянем быстрее, иначе почти всё поле кажется красным
+  // и разница между полями тонет в общей красноте
+  if(share <= EQ) return rgb(RED, MID, Math.pow(clamp(share/EQ, 0, 1), 0.45));
+  return rgb(MID, GRN, clamp((share-EQ)/(GTOP-EQ), 0, 1));
+}
+// Два поля по 400 миров, заполняются синхронно: слева «стараешься», справа «нет».
+// Сравнивать глазами можно только одинаковое, поэтому поля одного размера,
+// заполняются в одном темпе и раскрашены по одной и той же шкале.
+defineScene('s10', {
+  holdSec: 26,
+  init(st){
+    st.M = 400; st.done = 0;
+    st.A = { res:[], tops:0, below:0 };   // ты стараешься
+    st.B = { res:[], tops:0, below:0 };   // ты не стараешься
+  },
+  isDone(st){ return st.done >= st.M; },
+  draw(ctx, W, H, st, dt){
+    const CO = 25, RO = 16;                         // 25×16 = 400 миров в поле
+    const gs = clamp(Math.min((W-90)/(2*CO), (H-136)/RO), 3.5, 17);
+    const gw = gs*CO, gh = gs*RO;
+    const gap = clamp(W - 2*gw - 24, 20, 54);
+    const ox = (W - (2*gw + gap))/2;
+    // блок «заголовки + поля + счётчики» центрируем в свободной части холста:
+    // нижние 52 px заняты шкалой цвета
+    const blockH = 26 + gh + 46;
+    const oy = Math.max(34, 26 + (H - 52 - blockH)/2);
+
+    for(let k=0;k<5 && st.done < st.M;k++){
+      const a = runWorld(20, 260, EFFORT), b = runWorld(20, 260, 1);
+      st.A.res.push(a); if(a.top) st.A.tops++; if(a.share < EQ) st.A.below++;
+      st.B.res.push(b); if(b.top) st.B.tops++; if(b.share < EQ) st.B.below++;
+      st.done++;
+    }
+
+    function panel(P, x, title, titleColor, sub){
+      T(ctx, title, x + gw/2, oy-16, {size:13.5, color:titleColor, align:'center', weight:'600'});
+      T(ctx, sub,   x + gw/2, oy-3,  {size:11,   color:C.dim,     align:'center'});
+      // рамка поля — чтобы было видно, что миров всегда 400, даже пока они не заполнились
+      ctx.save(); ctx.strokeStyle = C.line; ctx.lineWidth = 1;
+      ctx.strokeRect(x-2.5, oy+3.5, gw+4, gh+4); ctx.restore();
+      for(let i=0;i<st.done;i++){
+        const c = i%CO, r = Math.floor(i/CO);
+        const px = x + c*gs, py = oy + 6 + r*gs;
+        ctx.fillStyle = worldColor(P.res[i].share);
+        ctx.fillRect(px+0.6, py+0.6, gs-1.2, gs-1.2);
+        if(P.res[i].top){                       // мир, где монет у тебя больше всех
+          ctx.save(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;
+          ctx.strokeRect(px+1.1, py+1.1, gs-2.2, gs-2.2); ctx.restore();
+        }
+      }
+      // счётчики под полем
+      const cy = oy + 6 + gh + 20;
+      ctx.fillStyle = worldColor(GTOP);
+      ctx.fillRect(x, cy-10, 11, 11);
+      ctx.save(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4;
+      ctx.strokeRect(x+0.7, cy-9.3, 9.6, 9.6); ctx.restore();
+      T(ctx, 'монет больше всех — ' + P.tops, x+17, cy, {size:12, color:C.ink});
+      ctx.fillStyle = worldColor(0);
+      ctx.fillRect(x, cy+10, 11, 11);
+      T(ctx, 'меньше, чем поровну — ' + P.below, x+17, cy+19, {size:12, color:C.muted});
+    }
+    panel(st.A, ox,          'ты стараешься',    C.green, 'тебя замечают на четверть чаще');
+    panel(st.B, ox+gw+gap,   'ты не стараешься', C.dim,   'ты как все остальные');
+
+    // шкала цвета — по центру внизу, одна на оба поля
+    const lw = clamp(W*0.36, 140, 260), lx = (W-lw)/2, ly = H-32;
+    for(let i=0;i<lw;i++){
+      ctx.fillStyle = worldColor(i/lw*GTOP);
+      ctx.fillRect(lx + i, ly, 1.4, 8);
+    }
+    const eqx = lx + (EQ/GTOP)*lw;
+    line(ctx, eqx, ly-3, eqx, ly+11, C.ink, 1.4);
+    T(ctx, 'поровну', eqx, ly-7, {size:10.5, color:C.ink, align:'center'});
+    T(ctx, 'меньше', lx-7, ly+7.5, {size:10.5, color:C.dim, align:'right'});
+    T(ctx, 'намного больше', lx+lw+7, ly+7.5, {size:10.5, color:C.dim});
+    T(ctx, 'каждый квадратик — одна прожитая жизнь, в каждом поле их 400',
+      W/2, H-6, {size:11.5, color:C.dim, align:'center'});
+  }
+});
+
+/* ============================================================
+   Сцена 11 — сдвиг всей кривой
+   ============================================================ */
+function logn(x, mu, s){
+  if(x <= 0) return 0;
+  const z = (Math.log(x)-mu)/s;
+  return Math.exp(-z*z/2)/x;
+}
+defineScene('s11', {
+  init(st){ st.sh = 0; st.wait = 0.7; },
+  isDone(st){ return st.sh >= 1; },
+  draw(ctx, W, H, st, dt){
+    if(st.wait > 0) st.wait -= dt; else st.sh = Math.min(1, st.sh + dt*0.5);
+    const k = easeInOut(st.sh);
+
+    const padL = 40, padR = 30, top = 40, baseY = H-46;
+    const XMAX = 8, plotW = W-padL-padR, plotH = baseY-top;
+    const xOf = v => padL + v/XMAX*plotW;
+    const S = 0.62, MU0 = 0, MU1 = 0.62;
+    const PEAK = logn(Math.exp(MU0-S*S), MU0, S);
+    const yOf = d => baseY - d/PEAK*plotH*0.82;
+    const thr = 3.4;
+
+    // хвостовые области
+    function tail(mu, color){
+      ctx.save(); ctx.fillStyle = color; ctx.beginPath();
+      ctx.moveTo(xOf(thr), baseY);
+      for(let p=0;p<=120;p++){ const v = thr + p/120*(XMAX-thr); ctx.lineTo(xOf(v), yOf(logn(v,mu,S))); }
+      ctx.lineTo(xOf(XMAX), baseY); ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    function curve(mu, color, w){
+      ctx.strokeStyle = color; ctx.lineWidth = w; ctx.beginPath();
+      for(let p=0;p<=300;p++){ const v = 0.02 + p/300*XMAX; const x = xOf(v), y = yOf(logn(v,mu,S));
+        p?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+      ctx.stroke();
+    }
+    tail(MU0, 'rgba(109,127,146,.35)');
+    curve(MU0, '#54637a', 1.6);
+    const mu = lerp(MU0, MU1, k);
+    tail(mu, 'rgba(95,211,141,.30)');
+    curve(mu, C.green, 2.4);
+
+    line(ctx, xOf(thr), top-6, xOf(thr), baseY, '#ffffff44', 1, [4,4]);
+    T(ctx, 'редкий хороший исход →', xOf(thr)+8, top+6, {size:11.5, color:C.muted});
+    line(ctx, padL-8, baseY, W-padR, baseY, C.line, 1);
+    T(ctx, 'по горизонтали — насколько хорошо сложилось →', padL, H-12, {size:11.5, color:C.dim});
+    T(ctx, '↑ как часто складывается именно так', padL, top+10, {size:11.5, color:C.dim});
+    // каждую кривую подписываем на её же вершине
+    const mode0 = Math.exp(MU0-S*S), modeK = Math.exp(mu-S*S);
+    T(ctx, 'до', xOf(mode0)-8, yOf(logn(mode0,MU0,S))-12, {size:12.5, color:'#7c8ca1', align:'right'});
+    if(k > 0.12)
+      T(ctx, 'после вложенной работы', xOf(modeK)+10, yOf(logn(modeK,mu,S))-12,
+        {size:12.5, color:C.green});
+    T(ctx, 'закрашено — как часто выпадает редкий хороший исход', xOf(thr)+8, baseY-10,
+      {size:11, color:C.dim});
+    if(k > 0.9) T(ctx, 'кривая сдвинулась вся, и закрашенного стало заметно больше',
+      W-padR, H-12, {size:11.5, color:C.green, align:'right'});
+  }
+});
+
+/* ============================================================
+   Наблюдатели, навигация, кнопки
+   ============================================================ */
+const sections = Array.prototype.slice.call(document.querySelectorAll('section'));
+
+const dots = document.getElementById('dots');
+sections.forEach(sec => {
+  const b = document.createElement('button');
+  b.title = sec.dataset.title || '';
+  b.addEventListener('click', () => sec.scrollIntoView({behavior:'smooth', block:'start'}));
+  dots.appendChild(b);
+});
+const dotEls = Array.prototype.slice.call(dots.children);
+
+// появление текста
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: 0.12 });
+sections.forEach(s => io.observe(s));
+
+// активная сцена = та, чей центр ближе всего к центру экрана
+// (надёжнее порога пересечения: секция с длинным текстом может быть выше экрана)
+let cur = -1;
+function pickActive(){
+  const mid = window.innerHeight/2;
+  let best = 0, bestD = Infinity;
+  for(let i=0;i<sections.length;i++){
+    const r = sections[i].getBoundingClientRect();
+    const d = Math.abs((r.top + r.bottom)/2 - mid);
+    if(d < bestD){ bestD = d; best = i; }
+  }
+  if(best === cur) return;
+  cur = best;
+  dotEls.forEach((d,j) => d.classList.toggle('on', j === best));
+  const id = sections[best].id;
+  if(SCENES[id]) activate(id); else activeId = null;
+}
+
+document.querySelectorAll('.again').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const id = btn.dataset.again, s = SCENES[id];
+    if(!s) return;
+    if(s.def.again && s.st){ s.def.again(s.st); }
+    else { activeId = null; activate(id); }
+  });
+});
+
+const bar = document.getElementById('bar');
+let ticking = false;
+function onScroll(){
+  const max = document.body.scrollHeight - window.innerHeight;
+  bar.style.width = (max > 0 ? (window.scrollY/max*100) : 0) + '%';
+  if(!ticking){
+    ticking = true;
+    requestAnimationFrame(() => { ticking = false; pickActive(); });
+  }
+}
+window.addEventListener('scroll', onScroll, {passive:true});
+onScroll(); pickActive();
+
+let rt;
+window.addEventListener('resize', () => {
+  clearTimeout(rt);
+  rt = setTimeout(() => { const id = activeId; activeId = null; if(id) activate(id); }, 160);
+});
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

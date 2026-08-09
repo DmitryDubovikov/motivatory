@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Два вида распределений — четыре документа</title>
+<style>
+  :root{
+    --bg:#0d1117; --bg2:#131923; --ink:#e8eef6; --muted:#93a1b1; --dim:#5d6b7c;
+    --blue:#5ba8f5; --gold:#f0a83c; --line:#243040;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex; justify-content:center; padding:10vh 20px 12vh;
+  }
+  .wrap{width:100%; max-width:740px}
+  .kicker{
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:0 0 14px;
+  }
+  h1{font-size:clamp(34px,6vw,58px);line-height:1.05;margin:0 0 22px;font-weight:400;letter-spacing:-.02em}
+  p{font-size:clamp(17px,2vw,20px);line-height:1.62;color:#cfdae6;margin:0 0 16px}
+  .fine{font-size:15px;color:var(--dim);line-height:1.5}
+  ol{list-style:none;padding:0;margin:34px 0 0;counter-reset:d}
+  li{border-top:1px solid var(--line);padding:20px 0 20px 44px;position:relative;counter-increment:d}
+  li:before{
+    content:counter(d);position:absolute;left:0;top:22px;
+    font-family:ui-sans-serif,-apple-system,sans-serif;font-size:13px;color:var(--dim);
+  }
+  a.doc{font-size:clamp(20px,2.6vw,25px);color:var(--ink);text-decoration:none;border-bottom:1px solid #35455a}
+  a.doc:hover{color:var(--gold);border-color:var(--gold)}
+  .about{margin:8px 0 0;color:var(--muted);font-size:16.5px;line-height:1.5}
+  .end{margin:6px 0 0;color:var(--dim);font-size:14.5px;line-height:1.45}
+  .end b{color:var(--blue);font-weight:600}
+  hr{height:1px;background:var(--line);border:0;margin:40px 0 24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">Четыре документа, которые читаются по порядку</p>
+  <h1>Два вида распределений</h1>
+  <p>Есть величины, у которых все результаты лежат рядом, и есть такие, где кто-то улетает далеко вперёд. Мерка у нас на всё одна и та же — и на половине величин она врёт. Каждый документ — это экран за экраном с работающими моделями: числа рождаются прямо в браузере, а не нарисованы заранее.</p>
+  <p class="fine">Открываются двойным щелчком, работают без интернета. Читать лучше по порядку — каждый следующий стоит на предыдущем.</p>
+  <ol>
+    <li>
+      <a class="doc" href="kolokol-i-khvost.html">Два вида распределений</a>
+      <p class="about">Доска с гвоздиками, рост людей, города Аргентины. Откуда берутся две разные формы и как отличить одну от другой самому, ничего не пересчитывая.</p>
+      <p class="end"><b>Вывод:</b> мерить себя средним имеет смысл только там, где результат упирается в тебя одного.</p>
+    </li>
+    <li>
+      <a class="doc" href="potolka-net.html">Потолка нет</a>
+      <p class="about">Три тысячи живых людей, одна вертикальная черта и вопрос: что лежит справа от того, кто делает как все.</p>
+      <p class="end"><b>Вывод:</b> «как все» — не середина, а левый край. Слева от черты разница меряется процентами, справа — разами.</p>
+    </li>
+    <li>
+      <a class="doc" href="usilitel.html">Мир умножает фору</a>
+      <p class="about">Двадцать одинаковых игроков, растущая сеть и четыреста параллельных жизней, прожитых с одним и тем же старанием.</p>
+      <p class="end"><b>Вывод:</b> старание — не билет, а множитель шансов; и работает он на всю твою кривую сразу.</p>
+    </li>
+    <li>
+      <a class="doc" href="chislo-popytok.html">Почему решает число попыток</a>
+      <p class="about">Шестьдесят попыток одного человека, лучший результат из тысячи и два способа набирать слова в чужом языке.</p>
+      <p class="end"><b>Вывод:</b> неудачная попытка стоит только вложенного, удачная не ограничена ничем — а накопленное растёт от самого себя.</p>
+    </li>
+  </ol>
+  <hr>
+  <p class="fine">Тексты и модели написаны для читателя 10–11 лет. Как устроены документы и как писать следующие — в <a href="promty-motivatory.md" style="color:var(--muted)">promty-motivatory.md</a>.</p>
+</div>
+</body>
+</html>

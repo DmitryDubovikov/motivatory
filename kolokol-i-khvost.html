@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Два вида распределений</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --bg2:#131923;
+    --ink:#e8eef6;
+    --muted:#93a1b1;
+    --dim:#5d6b7c;
+    --blue:#5ba8f5;
+    --gold:#f0a83c;
+    --green:#5fd38d;
+    --red:#f2686c;
+    --violet:#b98cf0;
+    --line:#243040;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* ——— прогресс и навигация ——— */
+  #bar{position:fixed;top:0;left:0;height:2px;width:0;background:linear-gradient(90deg,var(--blue),var(--gold));z-index:50;transition:width .12s linear}
+  #dots{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:50;display:flex;flex-direction:column;gap:9px}
+  #dots button{
+    width:8px;height:8px;padding:0;border:0;border-radius:50%;
+    background:#2b3746;cursor:pointer;transition:background .25s, transform .25s;
+  }
+  #dots button:hover{background:#4a5a6c}
+  #dots button.on{background:var(--ink);transform:scale(1.45)}
+  @media (max-width:760px){#dots{display:none}}
+
+  /* ——— сцены ——— */
+  section{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:8vh 20px;position:relative;
+  }
+  .wrap{width:100%;max-width:940px}
+  .wrap > *{opacity:0;transform:translateY(14px);transition:opacity .7s ease,transform .7s ease}
+  section.in .wrap > *{opacity:1;transform:none}
+  section.in .wrap > *:nth-child(2){transition-delay:.08s}
+  section.in .wrap > *:nth-child(3){transition-delay:.16s}
+  section.in .wrap > *:nth-child(4){transition-delay:.24s}
+  section.in .wrap > *:nth-child(5){transition-delay:.32s}
+
+  .kicker{
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--dim);margin:0 0 14px;
+  }
+  h1{font-size:clamp(38px,7vw,68px);line-height:1.03;margin:0 0 22px;font-weight:400;letter-spacing:-.02em}
+  h2{font-size:clamp(26px,4.2vw,40px);line-height:1.12;margin:0 0 20px;font-weight:400;letter-spacing:-.01em}
+  p{font-size:clamp(17px,2vw,20.5px);line-height:1.62;color:#cfdae6;margin:0 0 16px;max-width:47em}
+  p.after{color:var(--muted);font-size:clamp(16px,1.8vw,18.5px)}
+  .lead{font-size:clamp(19px,2.3vw,23px);color:#dae4ef}
+  em{color:var(--ink);font-style:italic}
+  b{font-weight:600;color:#fff}
+  .fine{font-size:15px;color:var(--dim);line-height:1.5}
+  .stage{width:100%;height:clamp(250px,44vh,420px);margin:22px 0 20px;position:relative}
+  canvas{width:100%;height:100%;display:block;border-radius:10px;background:var(--bg2)}
+  .again{
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:13.5px;color:var(--muted);background:transparent;
+    border:1px solid var(--line);border-radius:999px;padding:7px 16px;cursor:pointer;
+    transition:color .2s,border-color .2s;margin:0 0 18px;
+  }
+  .again:hover{color:var(--ink);border-color:#3d4c5e}
+  .actbar{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  .tag{
+    font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+  }
+  .rule{height:1px;background:var(--line);border:0;margin:34px 0 30px;max-width:47em}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:47em;margin:4px 0 18px}
+  @media (max-width:640px){.two{grid-template-columns:1fr}}
+  .col{border:1px solid var(--line);border-radius:10px;padding:15px 18px 16px;background:var(--bg2)}
+  .col h3{margin:0 0 9px;font-size:19px;font-weight:600;letter-spacing:0}
+  .col ul{list-style:none;margin:0;padding:0}
+  .col li{font-size:16.5px;line-height:1.5;color:#cfdae6;padding:4px 0 4px 15px;position:relative}
+  .col li:before{content:"·";position:absolute;left:2px;color:var(--dim)}
+  .col .note{font-size:14.5px;color:var(--muted);margin:11px 0 0;line-height:1.45;max-width:none}
+  ul.take{list-style:none;padding:0;margin:0;max-width:47em}
+  ul.take li{
+    font-size:clamp(17px,2vw,20px);line-height:1.55;color:#cfdae6;
+    padding:14px 0 14px 22px;border-top:1px solid var(--line);position:relative;
+  }
+  ul.take li:before{content:"—";position:absolute;left:0;color:var(--dim)}
+  .scrollhint{
+    position:absolute;bottom:26px;left:50%;transform:translateX(-50%);
+    font-family:ui-sans-serif,-apple-system,sans-serif;font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--dim);animation:bob 2.4s ease-in-out infinite;
+  }
+  @keyframes bob{0%,100%{transform:translate(-50%,0);opacity:.55}50%{transform:translate(-50%,7px);opacity:1}}
+</style>
+</head>
+<body>
+
+<div id="bar"></div>
+<nav id="dots"></nav>
+
+<!-- 0 ——————————————————————————————— -->
+<section id="s0" data-title="Крючок">
+  <div class="wrap">
+    <p class="kicker">Удивительное открытие про наш мир</p>
+    <h1>Два вида распределений</h1>
+    <div class="stage"><canvas id="cv-s0"></canvas></div>
+    <p class="lead">Слева — человек вдвое выше среднего. Таких не было <em>никогда</em>: ни одного за всю историю человечества. Справа — землетрясение. Есть города, под которыми земля вздрагивает постоянно, и почти всегда так слабо, что только качнётся люстра. Но иногда там же, под тем же городом, случается толчок в миллион раз сильнее — и города больше нет. Где-нибудь на Земле такое бывает каждый год.</p>
+    <p>И там и там — просто числа: сантиметры, сила подземного толчка. Почему «в 2 раза больше» невозможно, а «в миллион раз больше» никого не удивляет?</p>
+  </div>
+  <div class="scrollhint">листай вниз</div>
+</section>
+
+<!-- 1 ——————————————————————————————— -->
+<section id="s1" data-title="Нормальное распределение">
+  <div class="wrap">
+    <p class="kicker">Акт I · Когда все рядом</p>
+    <h2>Нормальное распределение</h2>
+    <p>Чтобы ответить на этот вопрос, придётся согласиться с непривычной мыслью: величины в жизни распределены по-разному. У роста людей — одним способом, у того, сколько людей живёт в городе, — совсем другим. Начнём с того распределения, что устроено привычно.</p>
+    <p>Когда результат складывается из множества мелких независимых причин — сотни генов, тысячи обедов, случайные болезни в детстве, — получается всегда одна и та же форма. Её называют <b>нормальным распределением</b>, или просто колоколом. Соберём её из случайностей своими руками.</p>
+    <p>Внизу — доска с гвоздиками. Шарик падает сверху и на каждом гвоздике отскакивает влево или вправо, как повезёт: никто им не управляет. В самом низу он попадает в один из столбиков. Столбик — это не шарик, а счётчик: чем больше шариков в него упало, тем он выше. Такую картинку — по горизонтали значение, по вертикали сколько штук с таким значением набралось — называют <b>гистограммой</b>; дальше мы будем строить только их. И сразу главное, иначе картинка обманет: все дорожки шарика равноправны, любая выпадает одинаково редко. Разница только в том, <em>сколько разных дорожек ведёт в каждый столбик</em>.</p>
+    <div class="stage"><canvas id="cv-s1"></canvas></div>
+    <div class="actbar"><button class="again" data-again="s1">ещё раз</button><span class="tag">каждый шарик отскакивает наугад</span></div>
+    <p class="after">Каждый шарик идёт своей случайной дорогой — а вместе они каждый раз рисуют один и тот же колокол: почти все оказываются у середины, и чем дальше от середины, тем их меньше. Вот откуда он берётся. Рядов двенадцать, значит, всего дорожек 4096. В крайний столбик ведёт ровно <b>одна</b> из них: надо все двенадцать раз подряд отскочить в одну и ту же сторону. А в средний столбик ведут <b>924</b> разные дорожки — лишь бы влево и вправо вышло поровну, а в каком порядке, неважно. Отсюда и высота столбиков: не потому, что кому-то повезло, а потому, что дорожек к середине почти тысяча, а к краю одна. Середину колокола называют <b>средним</b>: это самый обычный, самый частый размер.</p>
+  </div>
+</section>
+
+<!-- 2 ——————————————————————————————— -->
+<section id="s2" data-title="Хвост колокола">
+  <div class="wrap">
+    <p class="kicker">Акт I</p>
+    <h2>Как быстро гаснет хвост колокола</h2>
+    <p>Шарики были моделью. Заменим их на людей: каждый гвоздик — одна мелкая причина, а столбик внизу — сколько людей получилось такого роста. Рост людей укладывается в тот же самый колокол, и середина у него — 170 см.</p>
+    <p>У колокола есть правый край — люди заметно выше среднего. Такой край называют <b>правым хвостом</b>: там редкие случаи, и чем дальше, тем их меньше. Слово тут ничего не говорит про отставание — это просто вытянутый край картинки, и левый хвост у неё тоже есть, только нас интересует правый: там те, у кого измеренное число самое большое. Главный вопрос про любой хвост — как быстро «редко» превращается в «никогда». Пойдём вправо шагами по 7 сантиметров и на каждом шаге посмотрим, на скольких человек приходится один такой.</p>
+    <div class="stage"><canvas id="cv-s2"></canvas></div>
+    <div class="actbar"><button class="again" data-again="s2">ещё раз</button></div>
+    <p class="after">Каждый следующий шаг вправо обходится не немного дороже предыдущего, а в десятки раз дороже. И вот тут появляется предел. Людей на Земле восемь миллиардов, а всех людей за всю историю — около ста миллиардов. Как только «один на столько-то» перевалит за это число, встретить такого человека уже негде: перебирать некого. Отсюда и видно, где хвост кончается, — и до трёх метров он не дотягивается никак.</p>
+    <p class="fine">Честная оговорка: настоящий рост — не идеальный колокол. У самого края реальных людей заметно больше, чем обещает эта модель: самый высокий человек в истории был 272 см, а модель считает такой рост невозможным. Так что лестница верно показывает, <em>как стремительно</em> гаснет хвост, но у самого его конца ей верить нельзя. Модель — это модель.</p>
+  </div>
+</section>
+
+<!-- 3 ——————————————————————————————— -->
+<section id="s3h" data-title="Степенное распределение">
+  <div class="wrap">
+    <p class="kicker">Акт II · Когда кто-то улетает</p>
+    <h2>Степенное распределение</h2>
+    <p>Теперь возьмём величину, устроенную совсем иначе: сколько людей живёт в одном месте. Соберём все населённые пункты Аргентины — деревни, посёлки, города: от деревушки в двести жителей до Буэнос-Айреса.</p>
+    <p>Строим ту же гистограмму, что строили из шариков, и по тому же правилу: по горизонтали — сколько в месте жителей, по вертикали — сколько таких мест набралось. Столбик снова считает штуки, только штуки теперь — посёлки и города.</p>
+    <div class="stage"><canvas id="cv-s3h"></canvas></div>
+    <div class="actbar"><button class="again" data-again="s3h">ещё раз</button><span class="tag">шкала отъезжает сама</span></div>
+    <p class="after">Сначала шкала доходит до двадцати тысяч жителей. Горб не посередине, а прижат к самому левому краю, и это не наклон, а обрыв: больше половины пунктов — меньше пятисот жителей, и все они стоят в одном первом столбике. Дальше высота падает так быстро, что уже к третьему столбику от него остаются крохи. А вправо тянется длинный редкий хвост, и он уходит за край картинки. Такую форму называют <b>степенным распределением</b>.</p>
+    <p class="after">Поэтому картинка и отъезжает: до ста тысяч, до шестисот, пока в кадр наконец не влезет самый большой. Край у хвоста, конечно, есть — Буэнос-Айрес и есть край. Но он так далеко вправо, что шкалу пришлось растянуть в сто шестьдесят раз, и на такой шкале вся остальная страна слиплась в одну полоску слева, а справа стоят три одиноких столбика: Росарио, Кордова, Буэнос-Айрес. Вот что значит «хвост длиннее»: не что края нет, а что до него несоизмеримо дальше.</p>
+    <p class="fine">Числа на картинке смоделированы: полной таблицы по всем аргентинским посёлкам у нас под рукой нет. Но форму мы не подбирали — она получилась сама, и ровно такую находят, когда пересчитывают настоящие посёлки и города.</p>
+  </div>
+</section>
+
+<!-- 3b ——————————————————————————————— -->
+<section id="s3b" data-title="Два закона">
+  <div class="wrap">
+    <p class="kicker">Акт II · развилка</p>
+    <h2>Про любую величину можно спросить, по какому она закону</h2>
+    <p>Остановимся и назовём вслух то, что сейчас произошло. Мы дважды сделали ровно одно и то же: взяли величину, разложили её по столбикам и посмотрели на форму. Считали одинаково — а формы вышли разные: у роста горб посередине и края, у населения обрыв у левого края и хвост без конца. Значит, форма — свойство не наше, а самой величины: не мы выбираем, как на неё смотреть, это она так устроена в жизни. И тогда про любую величину, какую можно измерить, есть законный вопрос: <em>она живёт по колоколу или по степенному закону?</em> Ответ у каждой величины свой, и он от нас не зависит — его можно только пойти и выяснить.</p>
+    <div class="two">
+      <div class="col">
+        <h3 style="color:var(--blue)">Живут по колоколу</h3>
+        <ul>
+          <li>рост — у взрослых мужчин</li>
+          <li>размер ноги — у твоих одноклассников</li>
+          <li>время на стометровке — у школьников одного возраста</li>
+          <li>длина слова в буквах — у слов этой страницы</li>
+          <li>сколько лет прожил — у людей одного поколения</li>
+        </ul>
+        <p class="note">У каждой есть потолок, и он совсем близко. Самое большое отличается от самого обычного в полтора-два раза — и на этом всё.</p>
+      </div>
+      <div class="col">
+        <h3 style="color:var(--gold)">Живут по степенному закону</h3>
+        <ul>
+          <li>доход за год — у жителей страны</li>
+          <li>сколько просмотров набрал ролик — у роликов одного канала</li>
+          <li>тираж — сколько экземпляров напечатали — у книг, вышедших за год</li>
+          <li>сколько жителей — у населённых пунктов Аргентины</li>
+          <li>сколько энергии выделилось — у землетрясений за год</li>
+        </ul>
+        <p class="note">Потолка нет вовсе. Самое большое отличается от обычного в сотни и тысячи раз — и это не рекорд, а будни.</p>
+      </div>
+    </div>
+    <p>Величины из левого столбца устроены не так, как из правого, и мерить их одной меркой нельзя. Всё, что мы знаем про рост, к деньгам просто неприменимо. Осталось понять, как отличать одно от другого самому — когда никакой таблицы под рукой нет.</p>
+  </div>
+</section>
+
+<!-- 3c ——————————————————————————————— -->
+<section id="s3c" data-title="Как отличить">
+  <div class="wrap">
+    <p class="kicker">Акт III · Что с этим делать</p>
+    <h2>Как отличить самому</h2>
+    <p>Таблица — это ответы, которые кто-то уже посчитал. А пересчитать самому обычно нельзя: чтобы разложить по столбикам доходы жителей страны, нужна таблица со всеми жителями страны. Значит, нужен признак, который виден без пересчёта.</p>
+    <p>Он есть, и он про то, <em>как результат набирается</em>. Соберём две величины из одной и той же случайности, по две тысячи прогонов каждую.</p>
+    <p>Слева результат <b>складывается</b>: рост — это 170 см плюс двенадцать мелких вкладов, и каждый добавляет всего пару сантиметров в ту или другую сторону. Ни один из них ничего не решает, все понемногу. Справа результат <b>расходится по людям</b>: ты сделал что-то одно и показал одному человеку. Дальше как повезёт — чаще всего он не покажет никому, иногда покажет одному, иногда двоим или троим, и каждый из них снова так же. Считаем, сколько человек увидело в итоге.</p>
+    <div class="stage"><canvas id="cv-s3c"></canvas></div>
+    <div class="actbar"><button class="again" data-again="s3c">ещё раз</button><span class="tag">по 2000 прогонов на каждую картинку</span></div>
+    <p class="after">Слева — знакомый колокол: горка посередине, и самый высокий из двух тысяч всего процентов на пятнадцать выше обычного. Справа из тех же двух тысяч прогонов больше сорока из ста гаснут сразу: посмотрел один человек, и всё. До сотни человек добирается примерно одна цепочка из сорока. Зато самая длинная утаскивает за собой сотни людей, а иногда и больше тысячи, — в сотни раз больше обычного. Никакой новой случайности мы справа не добавляли: та же монетка, тот же наугад. Вся разница в том, что слева случайности складывались, а справа каждая тянула за собой следующие.</p>
+    <p class="after">Отсюда признак, который работает без всякого пересчёта. Если результат упирается в тебя одного — пробежал, решил, поднял, — причины складываются, и это <b>колокол</b>: потолок близко, а середина — честный ориентир. Если результат может пойти по людям — сделанное тобой посмотрели, показали другим, купили, — это <b>степенной закон</b>: потолка нет, а середина не говорит почти ничего.</p>
+    <p class="after">И вот зачем это нужно на самом деле. Мерку мы обычно берём одну и ту же — «сколько у меня по сравнению с обычным». Под колоколом эта мерка честная: быть в середине значит быть почти на пределе возможного, дальше всё равно некуда. Под степенным законом та же мерка врёт, и всегда в одну сторону: на среднее там не похож почти никто, и по своему месту у левого края нельзя понять ровно ничего — ни про то, много это или мало, ни про то, куда можно дойти.</p>
+    <p class="fine">Честная оговорка: цепочку в модели мы обрываем, когда она перестаёт расти сама. В жизни у неё есть и второй ограничитель — сколько всего людей на свете может это увидеть. Поэтому «потолка нет» значит не «бесконечно», а «до потолка так далеко, что в жизни до него не доходят».</p>
+  </div>
+</section>
+
+<!-- итог ——————————————————————————————— -->
+<section id="s13" data-title="Что унести">
+  <div class="wrap">
+    <p class="kicker">Итог</p>
+    <h2>Что стоит унести</h2>
+    <ul class="take">
+      <li>Величины бывают двух устройств: когда все рядом (колокол) и когда кто-то улетает (степенное). Отличить их можно по форме: разложи всех по столбикам — по горизонтали измеренное число, по вертикали сколько штук с таким числом — и посмотри. У колокола выйдет горб посередине и стена в полутора шагах от него; у степенного — толпа, сплющенная у левого края, и хвост, который уходит за экран.</li>
+      <li>«Хвост длиннее» значит не «бесконечный», а «дотягивается до чисел, которые в жизни правда встречаются». У колокола хвост кончается почти сразу: каждый следующий шаг вправо в десятки раз реже предыдущего, и очень быстро таких людей просто не остаётся. У степенного он дотягивается так далеко, что до конца мы в своей жизни не доходим.</li>
+      <li>Форма — свойство самой величины, а не наше. Не мы решаем, как на неё смотреть: она так устроена в жизни, и это можно только пойти и выяснить.</li>
+      <li>Выяснять можно без пересчёта, по одному признаку. Результат упирается в тебя одного — причины складываются, это колокол, потолок близко. Результат может пойти по людям — это степенной закон, потолка нет.</li>
+      <li>Отсюда единственное, что стоит запомнить намертво: мерить себя средним имеет смысл только под колоколом. Там середина — почти весь доступный результат. Под степенным законом на среднее не похож почти никто, и место у левого края не говорит ни про то, много это или мало, ни про то, куда можно дойти.</li>
+    </ul>
+    <hr class="rule">
+    <p class="fine">Дальше можно проверить самому: возьми любые числа из жизни — сколько очков набирают игроки твоей команды, сколько просмотров у роликов канала, сколько жителей в городах твоей области — разложи по столбикам и посмотри, колокол это или степенное.</p>
+  </div>
+</section>
+
+<script>
+"use strict";
+/* ============================================================
+   Мини-каркас сцен: одна rAF-петля, рисует только активную сцену.
+   ============================================================ */
+const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SPEED = REDUCED ? 6 : 1;
+
+const C = {
+  ink:'#e8eef6', muted:'#93a1b1', dim:'#5d6b7c', line:'#243040',
+  blue:'#5ba8f5', gold:'#f0a83c', green:'#5fd38d', red:'#f2686c', violet:'#b98cf0',
+  bg:'#131923'
+};
+const SANS = 'ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif';
+
+const SUPD = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+function sup(n){ return String(n).split('').map(d => SUPD[+d] || d).join(''); }
+function fmt(n){ return Math.round(n).toLocaleString('ru-RU').replace(/,/g,' '); }
+function plural(n, one, few, many){      // 1 город, 2 города, 5 городов
+  const t = n % 100;
+  if(t >= 11 && t <= 14) return many;
+  const d = n % 10;
+  return d === 1 ? one : (d >= 2 && d <= 4 ? few : many);
+}
+function lerp(a,b,t){ return a + (b-a)*t; }
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function easeOut(t){ return 1 - Math.pow(1-t, 3); }
+function easeInOut(t){ return t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+function gauss(){ let u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function pareto(a, xmin){ return xmin*Math.pow(Math.random(), -1/a); }
+
+function T(ctx, txt, x, y, o){
+  o = o || {};
+  ctx.save();
+  ctx.font = (o.weight||'400') + ' ' + (o.size||13) + 'px ' + (o.family||SANS);
+  ctx.fillStyle = o.color || C.muted;
+  ctx.textAlign = o.align || 'left';
+  ctx.textBaseline = o.base || 'alphabetic';
+  if(o.alpha != null) ctx.globalAlpha = o.alpha;
+  ctx.fillText(txt, x, y);
+  ctx.restore();
+}
+function line(ctx, x1,y1,x2,y2, color, w, dash){
+  ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=w||1;
+  if(dash) ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.restore();
+}
+function rrect(ctx,x,y,w,h,r){
+  r = Math.min(r, w/2, h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+const SCENES = {};
+function defineScene(id, def){ SCENES[id] = { def:def, cv:document.getElementById('cv-'+id), ctx:null, st:null }; }
+
+function fit(s){
+  const cv = s.cv;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+  s.ctx = cv.getContext('2d');
+  s.ctx.setTransform(dpr,0,0,dpr,0,0);
+  s.W = w; s.H = h;
+}
+function initScene(s){
+  fit(s);
+  s.st = { t:0 };
+  if(s.def.init) s.def.init(s.st, s.W, s.H);
+}
+
+let activeId = null;
+function activate(id){
+  if(!SCENES[id]) return;
+  if(activeId === id) return;
+  activeId = id;
+  initScene(SCENES[id]);
+}
+
+let last = 0;
+function loop(ts){
+  if(!last) last = ts;
+  const dt = clamp((ts-last)/1000, 0, 0.05) * SPEED;
+  last = ts;
+  const s = SCENES[activeId];
+  if(s && s.ctx){
+    s.st.t += dt;
+    s.ctx.clearRect(0,0,s.W,s.H);
+    s.ctx.fillStyle = C.bg; s.ctx.fillRect(0,0,s.W,s.H);
+    s.def.draw(s.ctx, s.W, s.H, s.st, dt);
+    // досмотрел до конца — держим последний кадр и запускаем заново.
+    // сколько держать, решает сама сцена: где в финале есть что читать, восьми секунд мало
+    if(s.def.isDone && s.def.isDone(s.st)){
+      s.st.hold = (s.st.hold || 0) + dt;
+      if(s.st.hold > (s.def.holdSec || 8)) initScene(s);
+    }
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ============================================================
+   Сцена 0 — крючок
+   ============================================================ */
+function person(ctx, x, gy, h, color, ghost){
+  if(!(h > 2)) return;            // нулевая/отрицательная высота — рисовать нечего
+  const hr = h*0.105;
+  ctx.save();
+  if(ghost){ ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.setLineDash([5,5]); }
+  else ctx.fillStyle = color;
+  // голова
+  ctx.beginPath(); ctx.arc(x, gy - h + hr, hr, 0, 7); ghost ? ctx.stroke() : ctx.fill();
+  // тело
+  const bw = h*0.17, bt = gy - h + hr*2.3, bh = h*0.44;
+  ctx.beginPath(); rrect(ctx, x-bw/2, bt, bw, bh, bw*0.4); ghost ? ctx.stroke() : ctx.fill();
+  // ноги
+  const lw = h*0.055;
+  ctx.beginPath(); rrect(ctx, x-bw*0.42, bt+bh-lw, lw, gy-(bt+bh)+lw, lw/2); ghost?ctx.stroke():ctx.fill();
+  ctx.beginPath(); rrect(ctx, x+bw*0.42-lw, bt+bh-lw, lw, gy-(bt+bh)+lw, lw/2); ghost?ctx.stroke():ctx.fill();
+  ctx.restore();
+}
+
+defineScene('s0', {
+  init(st){ st.p = 0; },
+  isDone(st){ return st.p >= 1; },
+  draw(ctx, W, H, st, dt){
+    st.p = Math.min(1, st.p + dt*0.5);
+    const e = easeOut(st.p);
+    const mid = W/2, gy = H - 46;
+    line(ctx, mid, 22, mid, H-22, C.line, 1);
+
+    // ——— левая половина: рост ———
+    const cx = mid*0.5;
+    line(ctx, 26, gy, mid-26, gy, C.line, 1);
+    const h1 = Math.min((H-110), 118);
+    person(ctx, cx-46, gy, h1, '#6d7f92', false);
+    T(ctx, '170 см', cx-46, gy+20, {size:12, color:C.dim, align:'center'});
+
+    const h2full = h1*2;
+    const h2 = h2full*e;
+    person(ctx, cx+46, gy, h2, C.red, true);
+    if(st.p > .55){
+      const a = (st.p-.55)/.45;
+      T(ctx, '340 см', cx+46, gy+20, {size:12, color:C.red, align:'center', alpha:a});
+      // крест
+      ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = C.red; ctx.lineWidth = 3;
+      const kx = cx+46, ky = gy - h2full*0.55, r = 15;
+      ctx.beginPath(); ctx.moveTo(kx-r,ky-r); ctx.lineTo(kx+r,ky+r);
+      ctx.moveTo(kx+r,ky-r); ctx.lineTo(kx-r,ky+r); ctx.stroke(); ctx.restore();
+    }
+    T(ctx, 'такого человека не было никогда', cx, gy+40, {size:12, color:C.dim, align:'center'});
+    T(ctx, 'рост человека', 26, 22, {size:11, color:C.dim});
+
+    // ——— правая половина: сила подземного толчка ———
+    const rx = mid + mid*0.5;
+    line(ctx, mid+26, gy, W-26, gy, C.line, 1);
+    const bw = 34;
+    // слабый толчок
+    ctx.fillStyle = '#6d7f92';
+    ctx.beginPath(); rrect(ctx, rx-72-bw/2, gy-14, bw, 14, 3); ctx.fill();
+    T(ctx, 'качнулась люстра', rx-72, gy+20, {size:12, color:C.dim, align:'center'});
+    // огромный — уходит за верх
+    const bigTop = lerp(gy, -60, e);
+    ctx.fillStyle = C.gold;
+    ctx.beginPath(); rrect(ctx, rx+34-bw/2, bigTop, bw, gy-bigTop, 3); ctx.fill();
+    T(ctx, 'рухнул город', rx+34, gy+20, {size:12, color:C.gold, align:'center'});
+    if(st.p > .6){
+      const a = (st.p-.6)/.4;
+      // на узком экране подписи справа не помещаются — уводим их влево от полоски
+      const room = W - (rx+34+26) > 210;
+      const lx2 = room ? rx+34+26 : rx+34-24, al = room ? 'left' : 'right';
+      T(ctx, '↑ полоска не помещается:', lx2, 40, {size:12, color:C.gold, alpha:a, align:al});
+      T(ctx, 'это землетрясение в миллион раз сильнее', lx2, 56, {size:12, color:C.gold, alpha:a, align:al});
+    }
+    T(ctx, 'а такое где-нибудь бывает каждый год', rx, gy+40, {size:12, color:C.dim, align:'center'});
+    T(ctx, 'сила землетрясения', mid+30, 22, {size:11, color:C.dim});
+  }
+});
+
+/* ============================================================
+   Сцена 1 — доска Гальтона
+   ============================================================ */
+defineScene('s1', {
+  init(st, W, H){
+    st.rows = 12;
+    st.bins = new Array(st.rows+1).fill(0);
+    st.balls = [];
+    st.spawned = 0;
+    st.total = 320;
+    st.acc = 0;
+    st.done = 0;
+    st.sx = clamp((W-70)/(st.rows+3), 16, 46);
+    st.top = 22;
+    st.pegH = Math.max(110, H*0.44);
+    st.floor = H - 24;
+  },
+  isDone(st){ return st.done >= st.total; },
+  draw(ctx, W, H, st, dt){
+    const cx = W/2, sx = st.sx, rows = st.rows;
+    const rowH = st.pegH / rows;
+    const baseY = st.top + st.pegH + 6;
+
+    // колышки
+    ctx.fillStyle = '#31404f';
+    for(let r=0;r<rows;r++){
+      for(let i=0;i<=r;i++){
+        const x = cx + (i - r/2)*sx, y = st.top + r*rowH;
+        ctx.beginPath(); ctx.arc(x, y, 1.9, 0, 7); ctx.fill();
+      }
+    }
+
+    // рождение шариков
+    st.acc += dt;
+    while(st.spawned < st.total && st.acc > 0.035){
+      st.acc -= 0.035;
+      const steps = [];
+      let pos = 0;
+      for(let r=0;r<rows;r++){ const s = Math.random()<0.5?-1:1; steps.push(s); pos += s; }
+      st.balls.push({ steps:steps, k:0, f:0, bin:(pos+rows)/2 });
+      st.spawned++;
+    }
+
+    // движение
+    const maxBin = Math.max(1, Math.max.apply(null, st.bins));
+    for(let i=st.balls.length-1;i>=0;i--){
+      const b = st.balls[i];
+      b.f += dt*11;
+      while(b.f >= 1 && b.k < rows){ b.f -= 1; b.k++; }
+      if(b.k >= rows){
+        st.bins[b.bin]++; st.done++;
+        st.balls.splice(i,1); continue;
+      }
+      let off = 0;
+      for(let j=0;j<b.k;j++) off += b.steps[j];
+      const nxt = off + b.steps[b.k];
+      const x = cx + lerp(off, nxt, b.f)*sx/2;
+      const y = st.top + (b.k + b.f)*rowH;
+      ctx.fillStyle = C.blue;
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill();
+    }
+
+    // корзины
+    const plotH = st.floor - baseY - 4;
+    for(let i=0;i<st.bins.length;i++){
+      const h = (st.bins[i]/Math.max(6,maxBin))*plotH;
+      const x = cx + (i - rows/2)*sx - sx*0.42;
+      ctx.fillStyle = 'rgba(91,168,245,.75)';
+      ctx.beginPath(); rrect(ctx, x, st.floor-h, sx*0.84, h, 2); ctx.fill();
+    }
+    line(ctx, 20, st.floor, W-20, st.floor, C.line, 1);
+
+    // теоретическая кривая, когда почти всё упало
+    if(st.done > st.total*0.55){
+      const a = clamp((st.done - st.total*0.55)/(st.total*0.3),0,1);
+      ctx.save(); ctx.globalAlpha = a*0.9;
+      ctx.strokeStyle = C.gold; ctx.lineWidth = 2; ctx.beginPath();
+      const sigma = Math.sqrt(rows)/2;
+      for(let px=0;px<=200;px++){
+        const bi = px/200*rows;
+        const z = (bi - rows/2)/sigma;
+        const dens = Math.exp(-z*z/2);
+        // высота: приводим к текущей высоте центральной корзины
+        const centerCount = st.bins[Math.round(rows/2)] || 1;
+        const h = dens * (centerCount/Math.max(6,maxBin)) * plotH;
+        const x = cx + (bi - rows/2)*sx;
+        const y = st.floor - h;
+        px ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+      }
+      ctx.stroke(); ctx.restore();
+      const centerCount = st.bins[Math.round(rows/2)] || 1;
+      T(ctx, 'колокол', cx + sx*1.3, st.floor - (centerCount/Math.max(6,maxBin))*plotH - 12,
+        {size:13, color:C.gold, alpha:a});
+    }
+    T(ctx, 'упало шариков: ' + st.done, 24, H-8, {size:11.5, color:C.dim});
+  }
+});
+
+/* ============================================================
+   Сцена 2 — лестница «1 из N»
+   ============================================================ */
+const LADDER = [
+  {cm:177, txt:'один на 6 человек'},
+  {cm:184, txt:'один на 44 человека'},
+  {cm:191, txt:'один на 741 человека'},
+  {cm:198, txt:'один на 31 600 человек'},
+  {cm:205, txt:'один на 3,5 миллиона'},
+  {cm:212, txt:'один на миллиард'},
+  {cm:219, txt:'один на 800 миллиардов'},
+  {cm:226, txt:'один на полтора квадриллиона'}
+];
+defineScene('s2', {
+  init(st){ st.k = 0; st.pos = 0; st.wait = 1.4; st.final = 0; },
+  isDone(st){ return st.final >= 1; },
+  draw(ctx, W, H, st, dt){
+    const padL = 46, padR = 40, baseY = H-46;
+    // колокол рисуем целиком и симметрично: середина ровно посередине картинки,
+    // влево отведено столько же шагов, сколько вправо. Шагаем мы только вправо,
+    // но видно, что левая половина — точное зеркало правой
+    const REACH = 9.2;                             // докуда тянем кривую в обе стороны
+    const sig = (W - padL - padR)/(2*REACH);       // ширина одного шага
+    const x0 = padL + sig*REACH;                   // µ = 170, ровно посередине
+    const top = 62;                                // сверху место под две строки подписи
+    const xOf = k => x0 + k*sig;
+    const yOf = k => baseY - Math.exp(-k*k/2)*(baseY-top);
+
+    // кривая
+    ctx.strokeStyle = C.blue; ctx.lineWidth = 2; ctx.beginPath();
+    for(let p=0;p<=300;p++){
+      const k = -REACH + p/300*(2*REACH);
+      const x = xOf(k), y = yOf(k);
+      p ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+    line(ctx, 20, baseY, W-20, baseY, C.line, 1);
+
+    // продвижение
+    st.wait -= dt;
+    if(st.wait <= 0 && st.k < LADDER.length){
+      st.k++; st.wait = 1.9;
+      if(st.k === LADDER.length) st.wait = 3.0;
+    }
+    if(st.k >= LADDER.length && st.wait <= 0) st.final = Math.min(1, st.final + dt*0.8);
+
+    st.pos = lerp(st.pos, st.k, 1-Math.pow(0.001, dt));
+
+    // закрашенный хвост
+    if(st.pos > 0.02){
+      ctx.save(); ctx.fillStyle = 'rgba(240,168,60,.35)'; ctx.beginPath();
+      ctx.moveTo(xOf(st.pos), baseY);
+      for(let p=0;p<=120;p++){ const k = st.pos + p/120*(REACH-st.pos); ctx.lineTo(xOf(k), yOf(k)); }
+      ctx.lineTo(xOf(REACH), baseY); ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+
+    // метка
+    const mx = xOf(st.pos);
+    line(ctx, mx, top-14, mx, baseY, C.gold, 1.5);
+    const cur = LADDER[Math.max(0,Math.min(LADDER.length-1, st.k-1))];
+    if(st.k > 0){
+      const lx = clamp(mx, 150, W-150);
+      T(ctx, cur.cm + ' см', mx, baseY+20, {size:13, color:C.gold, align:'center', weight:'600'});
+      T(ctx, cur.txt, lx, top-22, {size:16, color:C.ink, align:'center', weight:'600'});
+      T(ctx, 'такой рост встречается:', lx, top-42, {size:11.5, color:C.dim, align:'center'});
+    }
+    T(ctx, '170 см — средний', x0, baseY+38, {size:11.5, color:C.dim, align:'center'});
+    // левая половина пустует не потому, что её нет: она зеркальна правой
+    T(ctx, 'слева всё зеркально: люди ниже среднего', xOf(-4.6), baseY+38,
+      {size:11.5, color:C.dim, align:'center'});
+
+    // финальный удар
+    if(st.final > 0){
+      ctx.save(); ctx.globalAlpha = easeOut(st.final);
+      ctx.fillStyle = 'rgba(19,25,35,.93)'; ctx.fillRect(0,0,W,H);
+      T(ctx, 'а «вдвое выше среднего», 340 см:', W/2, H/2-52, {size:14, color:C.muted, align:'center'});
+      T(ctx, 'один на 10'+sup(130), W/2, H/2, {size:40, color:C.gold, align:'center', weight:'600'});
+      T(ctx, '10'+sup(130)+' — это единица, за которой ещё 130 нулей', W/2, H/2+30,
+        {size:13, color:C.muted, align:'center'});
+      T(ctx, 'для сравнения: всех атомов видимой Вселенной — около 10'+sup(80),
+        W/2, H/2+54, {size:13, color:C.dim, align:'center'});
+      ctx.restore();
+    }
+  }
+});
+
+/* ============================================================
+   Сцена 3h — города, разложенные по столбикам: по горизонтали население,
+   по вертикали — сколько городов такого размера. Горб прижат к левому краю,
+   справа длинный редкий хвост, который не помещается в картинку.
+   ============================================================ */
+const CITY_N = 4000;                     // столько населённых пунктов в модели страны
+const POP_MIN = 0.2;                     // самая маленькая деревня — 200 жителей
+const POP_BIN = 0.5, POP_BINS = 40;      // столбики по 500 жителей, до 20 тысяч (всё в тысячах)
+// конец хвоста берём не из модели, а из жизни: иначе «самый большой» скачет от прогона
+// к прогону и может оказаться посёлком, хотя в тексте обещаны миллионы
+const REAL_BIG = [{n:'Буэнос-Айрес', k:3100}, {n:'Кордова', k:1450}, {n:'Росарио', k:1300}];
+function popLabel(k){                    // k — тысячи жителей
+  return k >= 1000 ? fmt(k/1000) + ' млн' : fmt(k) + ' тыс.';
+}
+
+function niceStep(mx){                   // круглый шаг шкалы: 1, 2 или 5 на порядок
+  const raw = mx/4, p = Math.pow(10, Math.floor(Math.log10(raw))), r = raw/p;
+  return (r <= 1 ? 1 : r <= 2 ? 2 : r <= 5 ? 5 : 10) * p;
+}
+
+function histoPanel(ctx, o){
+  // o: {x,y,w,h,counts,color,grow,title,note,xlab,step,lab,ylab}
+  const n = o.counts.length, bw = o.w/n;
+  const mx = Math.max(1, Math.max.apply(null, o.counts));
+
+  // шкала слева: без чисел непонятно, сколько же штук в столбике
+  const ys = niceStep(mx);
+  for(let v=ys; v<=mx; v+=ys){
+    const y = o.y + o.h - v/mx*o.h;
+    line(ctx, o.x, y, o.x+o.w, y, C.line, 1, [3,5]);
+    T(ctx, fmt(v), o.x-9, y+4, {size:10.5, color:C.dim, align:'right'});
+  }
+  line(ctx, o.x-6, o.y, o.x-6, o.y+o.h, C.line, 1);
+  if(o.ylab) T(ctx, o.ylab, o.x-9, o.y-8, {size:10.5, color:C.dim, align:'right'});
+
+  ctx.fillStyle = o.color;
+  for(let i=0;i<n;i++){
+    if(!o.counts[i]) continue;
+    const g = clamp(o.grow*2.2 - i/n*1.2, 0, 1);
+    // непустой столбик рисуем не тоньше двух пикселей: иначе длинный хвост
+    // из «по одному-два города» просто исчезнет с картинки
+    const h = Math.max(2, o.counts[i]/mx*o.h) * g;
+    if(h < 0.6) continue;
+    ctx.fillRect(o.x + i*bw, o.y + o.h - h, Math.max(1.6, bw-2), h);
+  }
+  line(ctx, o.x-6, o.y+o.h, o.x+o.w, o.y+o.h, C.line, 1);
+  // деления по горизонтали — по круглым значениям, а не по номерам столбиков:
+  // иначе при отъезде шкалы подписи скачут и мешаются в единицах
+  const xs = niceStep(o.xmax);
+  for(let v=xs; v<=o.xmax*1.001; v+=xs){
+    const x = o.x + v/o.xmax*o.w;
+    line(ctx, x, o.y+o.h, x, o.y+o.h+4, C.line, 1);
+    T(ctx, o.lab(v), x, o.y+o.h+16, {size:10.5, color:C.dim, align:'center'});
+  }
+  T(ctx, o.title, o.x, o.y-6, {size:12.5, color:o.color, weight:'600'});
+  // подпись оси — строкой ниже цифр, иначе она налезает на последнюю из них
+  T(ctx, o.xlab, o.x+o.w, o.y+o.h+30, {size:10.5, color:C.dim, align:'right'});
+  if(o.note) T(ctx, o.note, o.x+o.w, o.y+10, {size:11.5, color:o.color, align:'right'});
+}
+// остановки шкалы, в тысячах жителей: сначала видны только посёлки,
+// в конце в кадр наконец влезает Буэнос-Айрес
+const ZOOM = [20, 100, 600, 3200];
+
+defineScene('s3h', {
+  holdSec: 14,
+  init(st){
+    st.vals = [];
+    for(let i=0;i<CITY_N-REAL_BIG.length;i++){
+      // население в тысячах — степенной закон: почти все пункты крошечные,
+      // но изредка попадается тот, кто больше соседа в сотни раз.
+      // потолок в 500 тысяч: всё, что крупнее, в модели не нужно — там уже
+      // стоят настоящие города, и выдуманный сосед рядом с ними только соврал бы
+      let p; do { p = pareto(1, POP_MIN); } while(p > 500);
+      st.vals.push(p);
+    }
+    REAL_BIG.forEach(c => st.vals.push(c.k));   // конец хвоста — настоящий
+    st.g = 0; st.wait = 0.4;
+    st.step = 0; st.zoom = 0; st.pause = 0;
+  },
+  isDone(st){ return st.step >= ZOOM.length-1 && st.pause > 1.2; },
+  draw(ctx, W, H, st, dt){
+    if(st.wait > 0) st.wait -= dt; else st.g = Math.min(1, st.g + dt*0.5);
+    // столбики выросли — начинаем отъезжать, с паузой на каждой остановке
+    if(st.g >= 1){
+      st.pause += dt;
+      if(st.pause > 1.3 && st.step < ZOOM.length-1){
+        st.zoom = Math.min(1, st.zoom + dt*0.65);
+        if(st.zoom >= 1){ st.step++; st.zoom = 0; st.pause = 0; }
+      }
+    }
+    // отъезд равномерен «в разах», а не в тысячах: иначе первый прыжок съедает всё
+    const from = ZOOM[st.step], to = ZOOM[Math.min(ZOOM.length-1, st.step+1)];
+    const range = from*Math.pow(to/from, easeInOut(st.zoom));
+    const binK = range/POP_BINS;                 // сколько тысяч жителей в одном столбике
+
+    // пересчитываем столбики под текущую шкалу
+    const counts = new Array(POP_BINS).fill(0);
+    let out = 0;
+    for(let i=0;i<st.vals.length;i++){
+      const b = Math.floor(st.vals[i]/binK);
+      if(b >= POP_BINS) out++; else counts[b]++;
+    }
+
+    const padL = 62, padR = 26;
+    const top = 46, panelH = H - top - 60;
+    const w = W - padL - padR;
+
+    histoPanel(ctx, {x:padL, y:top, w:w, h:panelH, counts:counts, color:C.gold, grow:easeOut(st.g),
+      title:'сколько населённых пунктов такого размера', xlab:'жителей в посёлке или городе →',
+      xmax: range, lab: popLabel, ylab: 'штук',
+      note: (st.g > 0.75 && out > 0) ? '→ за правым краем ещё ' + out + ' ' +
+        plural(out, 'пункт', 'пункта', 'пунктов') : ''});
+
+    // настоящие города подписываем, как только они попадают в кадр
+    REAL_BIG.forEach((c, i) => {
+      const b = Math.floor(c.k/binK);
+      if(b >= POP_BINS) return;
+      const x = padL + (b + 0.5)*(w/POP_BINS);
+      const y = top + panelH - 12 - (i % 2)*15;   // соседние имена разводим по высоте
+      line(ctx, x, y + 4, x, top + panelH, C.gold, 1);
+      T(ctx, c.n, x, y, {size:11, color:C.gold, align:'center'});
+    });
+
+    const done = st.step >= ZOOM.length-1;
+    T(ctx, done ? 'чтобы в кадр попал Буэнос-Айрес, шкалу пришлось растянуть в ' +
+                  Math.round(ZOOM[ZOOM.length-1]/ZOOM[0]) + ' раз'
+                : 'шкала доехала до ' + popLabel(Math.round(range)) + ' жителей — конец хвоста ещё за краем',
+      padL, H-8, {size:11.5, color: done ? C.gold : C.muted});
+  }
+});
+
+/* ============================================================
+   Сцена 3c — складывается против расходится по людям.
+   Слева: рост — 170 см и двенадцать мелких вкладов, которые складываются.
+   Справа: цепочка показов — один показал нескольким, те снова нескольким.
+   Обе картинки собраны из одной и той же случайности, по 2000 прогонов,
+   и числа под ними считаются на глазах у читателя.
+   ============================================================ */
+const S3C_N = 2000;
+// скольким человек показывает дальше: 0, 1, 2 или 3 — в среднем 0,92.
+// среднее меньше единицы: цепочка обязана когда-нибудь оборваться,
+// иначе она разрасталась бы без конца и картинка врала бы в другую сторону
+const KIDS = [0.44, 0.28, 0.20, 0.08];
+function kidsCount(){
+  const r = Math.random();
+  let c = 0;
+  for(let i=0;i<KIDS.length;i++){ c += KIDS[i]; if(r < c) return i; }
+  return KIDS.length - 1;
+}
+function cascade(){                       // сколько человек увидело всего
+  let alive = 1, tot = 1;
+  while(alive > 0 && tot < 20000){
+    let next = 0;
+    for(let i=0;i<alive;i++) next += kidsCount();
+    alive = next; tot += next;
+  }
+  return tot;
+}
+function heightOnce(){                    // 170 см плюс двенадцать мелких вкладов
+  let v = 170;
+  for(let i=0;i<12;i++) v += (Math.random()*2 - 1)*3.5;
+  return v;
+}
+function medianOf(a){ const s = a.slice().sort((x,y)=>x-y); return s[s.length>>1]; }
+function dec2(v){ return String(Math.round(v*100)/100).replace('.', ','); }
+
+defineScene('s3c', {
+  holdSec: 16,
+  init(st){ st.h = []; st.c = []; st.acc = 0; },
+  isDone(st){ return st.h.length >= S3C_N; },
+  draw(ctx, W, H, st, dt){
+    st.acc += dt*430;
+    while(st.acc >= 1 && st.h.length < S3C_N){
+      st.acc -= 1;
+      st.h.push(heightOnce());
+      st.c.push(cascade());
+    }
+    const done = st.h.length >= S3C_N;
+
+    const padL = 46, padR = 26, top = 42, gap = 62, bot = 54;
+    const panelH = (H - top - bot - gap)/2;
+    const plotW = W - padL - padR;
+
+    function panel(y, vals, lo, hi, nb, color, title, tick, foot){
+      const bins = new Array(nb).fill(0);
+      let out = 0, mx = 0;
+      for(let i=0;i<vals.length;i++){
+        const v = vals[i];
+        if(v > mx) mx = v;
+        const k = Math.floor((v-lo)/(hi-lo)*nb);
+        if(k >= nb) out++; else if(k >= 0) bins[k]++;
+      }
+      const peak = Math.max(1, Math.max.apply(null, bins));
+      const bw = plotW/nb;
+      ctx.fillStyle = color;
+      for(let b=0;b<nb;b++){
+        if(!bins[b]) continue;
+        // непустой столбик не тоньше двух пикселей: иначе редкий хвост исчезнет
+        const h = Math.max(2, bins[b]/peak*panelH);
+        ctx.fillRect(padL + b*bw, y + panelH - h, Math.max(1.4, bw-0.8), h);
+      }
+      line(ctx, padL, y+panelH, W-padR, y+panelH, C.line, 1);
+      for(let i=0;i<=4;i++){
+        const x = padL + i/4*plotW;
+        line(ctx, x, y+panelH, x, y+panelH+4, C.line, 1);
+        T(ctx, tick(lo + (hi-lo)*i/4), x, y+panelH+16, {size:10.5, color:C.dim, align:'center'});
+      }
+      T(ctx, title, padL, y-8, {size:12.5, color:color, weight:'600'});
+      if(out > 0)
+        T(ctx, '→ за правым краем ещё ' + out, W-padR, y+12, {size:11.5, color:color, align:'right'});
+      // итог — одной короткой строкой: длинная не влезает на узком экране
+      if(done)
+        T(ctx, foot(mx, medianOf(vals)), padL, y+panelH+32,
+          {size:11.5, color:color, weight:'600'});
+    }
+
+    panel(top, st.h, 140, 200, 40, C.blue,
+      'рост: причины складываются',
+      v => String(Math.round(v)),
+      (mx, med) => 'самый высокий — ' + Math.round(mx) + ' см: ×' + dec2(mx/med) + ' от обычного');
+
+    panel(top + panelH + gap, st.c, 0, 60, 60, C.gold,
+      'показы: цепочка расходится по людям',
+      v => String(Math.round(v)),
+      (mx, med) => 'самая длинная — ' + fmt(mx) + ' ' +
+                   plural(mx, 'человек', 'человека', 'человек') +
+                   ': ×' + fmt(Math.round(mx/med)) + ' от обычной');
+
+    if(!done) T(ctx, 'прогонов: ' + st.h.length + ' из ' + S3C_N,
+      W-padR, H-8, {size:11.5, color:C.dim, align:'right'});
+  }
+});
+
+/* ============================================================
+   Наблюдатели, навигация, кнопки
+   ============================================================ */
+const sections = Array.prototype.slice.call(document.querySelectorAll('section'));
+
+const dots = document.getElementById('dots');
+sections.forEach(sec => {
+  const b = document.createElement('button');
+  b.title = sec.dataset.title || '';
+  b.addEventListener('click', () => sec.scrollIntoView({behavior:'smooth', block:'start'}));
+  dots.appendChild(b);
+});
+const dotEls = Array.prototype.slice.call(dots.children);
+
+// появление текста
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('in'); });
+}, { threshold: 0.12 });
+sections.forEach(s => io.observe(s));
+
+// активная сцена = та, чей центр ближе всего к центру экрана
+// (надёжнее порога пересечения: секция с длинным текстом может быть выше экрана)
+let cur = -1;
+function pickActive(){
+  const mid = window.innerHeight/2;
+  let best = 0, bestD = Infinity;
+  for(let i=0;i<sections.length;i++){
+    const r = sections[i].getBoundingClientRect();
+    const d = Math.abs((r.top + r.bottom)/2 - mid);
+    if(d < bestD){ bestD = d; best = i; }
+  }
+  if(best === cur) return;
+  cur = best;
+  dotEls.forEach((d,j) => d.classList.toggle('on', j === best));
+  const id = sections[best].id;
+  if(SCENES[id]) activate(id); else activeId = null;
+}
+
+document.querySelectorAll('.again').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const id = btn.dataset.again, s = SCENES[id];
+    if(!s) return;
+    if(s.def.again && s.st){ s.def.again(s.st); }
+    else { activeId = null; activate(id); }
+  });
+});
+
+const bar = document.getElementById('bar');
+let ticking = false;
+function onScroll(){
+  const max = document.body.scrollHeight - window.innerHeight;
+  bar.style.width = (max > 0 ? (window.scrollY/max*100) : 0) + '%';
+  if(!ticking){
+    ticking = true;
+    requestAnimationFrame(() => { ticking = false; pickActive(); });
+  }
+}
+window.addEventListener('scroll', onScroll, {passive:true});
+onScroll(); pickActive();
+
+let rt;
+window.addEventListener('resize', () => {
+  clearTimeout(rt);
+  rt = setTimeout(() => { const id = activeId; activeId = null; if(id) activate(id); }, 160);
+});
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
